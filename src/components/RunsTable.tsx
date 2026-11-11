@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   LayoutGrid,
   List,
-  Wand2,
   Medal,
   Activity,
   User,
@@ -29,7 +28,6 @@ interface RunsTableProps {
   onReDraw: () => void;
   onBackToConfig: () => void;
   onUpdateTime: (runId: string, boi: 1 | 2 | 3, value: string, isNt?: boolean) => void;
-  onFillSampleTimes?: () => void;
   onClearAllTimes?: () => void;
 }
 
@@ -41,7 +39,6 @@ export const RunsTable: React.FC<RunsTableProps> = ({
   onReDraw,
   onBackToConfig,
   onUpdateTime,
-  onFillSampleTimes,
   onClearAllTimes,
 }) => {
   // Mode: 'grouped_batteries' (Todas as baterias na tela em cards/seções) ou 'single_table'
@@ -673,17 +670,6 @@ export const RunsTable: React.FC<RunsTableProps> = ({
 
         {/* Quick Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          {onFillSampleTimes && (
-            <button
-              onClick={onFillSampleTimes}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20 transition cursor-pointer"
-              title="Simula o preenchimento automático de tempos realistas para demonstração e apuração da média"
-            >
-              <Wand2 className="w-3.5 h-3.5" />
-              Simular Tempos
-            </button>
-          )}
-
           {onClearAllTimes && (
             <button
               onClick={onClearAllTimes}
@@ -767,7 +753,7 @@ export const RunsTable: React.FC<RunsTableProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2">
             {leaders.length === 0 ? (
               <div className="col-span-3 text-xs text-slate-500 py-1 text-center font-medium">
-                Nenhum tempo lançado ainda. Digite os tempos T1, T2 e T3 ou clique em &quot;Simular Tempos&quot;
+                Nenhum tempo lançado ainda. Digite os tempos dos bois para iniciar a apuração.
                 para apurar os líderes da prova.
               </div>
             ) : (
@@ -917,59 +903,6 @@ export const RunsTable: React.FC<RunsTableProps> = ({
           </div>
         </div>
 
-        {/* Quick Example Chips */}
-        <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400 pt-1 border-t border-slate-800/60">
-          <span className="font-semibold text-slate-500">Exemplos rápidos:</span>
-          <button
-            type="button"
-            onClick={() => onSearchChange('15')}
-            className="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-amber-300 font-mono transition cursor-pointer"
-          >
-            Corrida 15
-          </button>
-          <button
-            type="button"
-            onClick={() => onSearchChange('nº 1')}
-            className="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-amber-300 font-mono transition cursor-pointer"
-          >
-            nº 1
-          </button>
-          <button
-            type="button"
-            onClick={() => onSearchChange('Rodada 1')}
-            className="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-indigo-300 font-mono transition cursor-pointer"
-          >
-            Rodada 1
-          </button>
-          <button
-            type="button"
-            onClick={() => onSearchChange('Ahmed')}
-            className="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-blue-300 transition cursor-pointer"
-          >
-            Ahmed
-          </button>
-          <button
-            type="button"
-            onClick={() => onSearchChange('Daniel')}
-            className="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-amber-300 transition cursor-pointer"
-          >
-            Daniel
-          </button>
-          <button
-            type="button"
-            onClick={() => onSearchChange('A x B')}
-            className="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-emerald-300 font-mono transition cursor-pointer"
-          >
-            Cruzamento A × B
-          </button>
-          <button
-            type="button"
-            onClick={() => onSearchChange('Fase 2')}
-            className="px-2 py-0.5 rounded-md bg-slate-800 hover:bg-slate-700 text-purple-300 font-mono transition cursor-pointer"
-          >
-            Fase 2
-          </button>
-        </div>
       </div>
 
       {/* Accordion Controls for Grouped Batteries View */}

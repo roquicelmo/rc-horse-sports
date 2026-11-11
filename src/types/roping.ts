@@ -1,7 +1,10 @@
 export interface Competitor {
   id: string;
+  registrationNo?: string;
   nome: string;
   handicap: number; // 1.0 to 5.0 (step 0.5)
+  headHandicap?: number;
+  heelHandicap?: number;
   apelido?: string;
   cidade?: string;
   grupo?: string; // 'A', 'B', 'C', etc.

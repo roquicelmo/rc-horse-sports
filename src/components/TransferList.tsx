@@ -48,7 +48,7 @@ export const TransferList: React.FC<TransferListProps> = ({
       badgeBg: 'bg-amber-500/15 border-amber-500/30 text-amber-300',
       badgeHover: 'hover:border-amber-500/60 hover:bg-amber-500/20',
       primaryBtn: 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/20',
-      cardActive: 'hover:border-amber-500/50 hover:bg-slate-800/80',
+      cardActive: 'hover:border-amber-300 hover:bg-amber-50/70',
       countPill: 'bg-amber-500/20 text-amber-300 border border-amber-500/40',
     }
     : {
@@ -61,7 +61,7 @@ export const TransferList: React.FC<TransferListProps> = ({
       badgeBg: 'bg-blue-500/15 border-blue-500/30 text-blue-300',
       badgeHover: 'hover:border-blue-500/60 hover:bg-blue-500/20',
       primaryBtn: 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white font-bold shadow-lg shadow-blue-500/20',
-      cardActive: 'hover:border-blue-500/50 hover:bg-slate-800/80',
+      cardActive: 'hover:border-teal-300 hover:bg-teal-50/70',
       countPill: 'bg-blue-500/20 text-blue-300 border border-blue-500/40',
     };
 
@@ -125,10 +125,10 @@ export const TransferList: React.FC<TransferListProps> = ({
           {onOpenAddModal && (
             <button
               onClick={onOpenAddModal}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition"
               title="Adicionar novo competidor à lista global"
             >
-              <UserPlus className="w-4 h-4 text-slate-400" />
+              <UserPlus className="w-4 h-4 text-amber-700" />
               <span>Novo Inscrito</span>
             </button>
           )}
@@ -150,13 +150,13 @@ export const TransferList: React.FC<TransferListProps> = ({
           <div className="p-4 sm:p-5 border-b border-slate-800/80 bg-slate-900/90">
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center text-slate-300">
+                <div className="w-7 h-7 rounded-lg bg-teal-50 flex items-center justify-center text-teal-700">
                   <Users className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     Inscritos Disponíveis
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 font-mono">
                       {filteredAvailable.length}
                     </span>
                   </h3>
@@ -212,10 +212,10 @@ export const TransferList: React.FC<TransferListProps> = ({
                 <div
                   key={item.id}
                   onClick={() => onSelect(item)}
-                  className={`group flex items-center justify-between p-3 rounded-xl bg-slate-950/50 border border-slate-800/80 cursor-pointer transition-all duration-150 ${theme.cardActive} hover:scale-[1.01]`}
+                  className={`group flex items-center justify-between p-3 rounded-xl bg-white border border-slate-800/80 cursor-pointer transition-all duration-150 ${theme.cardActive} hover:scale-[1.01]`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 group-hover:text-white group-hover:bg-slate-700 transition">
+                    <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-xs font-bold text-amber-800 group-hover:bg-amber-100 group-hover:border-amber-300 transition">
                       {item.nome
                         .split(' ')
                         .map((n) => n[0])
@@ -240,7 +240,7 @@ export const TransferList: React.FC<TransferListProps> = ({
                       Hcp {item.handicap.toFixed(1)}
                     </span>
                     <div
-                      className={`w-7 h-7 rounded-lg flex items-center justify-center bg-slate-800 text-slate-400 group-hover:bg-slate-700 group-hover:text-white transition`}
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center bg-amber-50 text-amber-700 group-hover:bg-amber-100 group-hover:text-amber-800 transition`}
                       title="Adicionar à seleção"
                     >
                       <Plus className="w-4 h-4" />
@@ -316,7 +316,7 @@ export const TransferList: React.FC<TransferListProps> = ({
           {/* List Body */}
           <div className="p-3 sm:p-4 flex-1 min-h-[360px] max-h-[460px] overflow-y-auto space-y-2">
             {selectedItems.length === 0 ? (
-              <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-6 rounded-xl border border-dashed border-slate-800/80 bg-slate-950/30">
+              <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-6 rounded-xl border border-dashed border-amber-200 bg-amber-50/60">
                 <div
                   className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-3 ${theme.accentBg} ${theme.accentBorder} border`}
                 >
@@ -341,7 +341,7 @@ export const TransferList: React.FC<TransferListProps> = ({
               filteredSelected.map((item) => (
                 <div
                   key={item.id}
-                  className={`group flex items-center justify-between p-3 rounded-xl bg-slate-950/70 border border-slate-800 transition-all duration-150 hover:border-slate-700`}
+                  className={`group flex items-center justify-between p-3 rounded-xl bg-white border border-slate-800 transition-all duration-150 hover:border-teal-200 hover:bg-teal-50/40`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div

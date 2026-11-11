@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import type {
   Competitor,
@@ -6,21 +6,113 @@ import type {
   Run,
   WizardStep,
 } from './types/roping';
-import { INITIAL_COMPETITORS } from './data/mockCompetitors';
+import { INITIAL_COMPETITORS } from './data/referenceAthletes';
 import { executeGroupCrossDraw, calculateRunTotal } from './utils/drawAlgorithm';
+import { Dashboard } from './components/Dashboard';
+import { SectionPlaceholder } from './components/SectionPlaceholder';
+import { Sidebar, type AppSection } from './components/Sidebar';
 import { WizardHeader } from './components/WizardHeader';
 import { TransferList } from './components/TransferList';
 import { DrawConfiguration } from './components/DrawConfiguration';
 import { RunsTable } from './components/RunsTable';
 import { NewCompetitorModal } from './components/NewCompetitorModal';
-import { Trophy, RefreshCw, Sparkles } from 'lucide-react';
+import { LoginPage } from './components/LoginPage';
+import { AthletesPage } from './components/AthletesPage';
+import { EventsPage } from './components/EventsPage';
+import { REFERENCE_EVENTS } from './data/referenceEvents';
+import type { EventSummary } from './types/events';
+import { EventDetailsPage } from './components/EventDetailsPage';
+import { RegistrationPage } from './components/RegistrationPage';
+import type { ArenaOption, EventFormInput } from './components/EventsPage';
+import { Menu, Trophy } from 'lucide-react';
 
 export const App: React.FC = () => {
   // 1. Wizard Current Step: 1, 2, 3, 4
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
+  const [showDashboard, setShowDashboard] = useState(true);
+  const [activeSection, setActiveSection] = useState<AppSection>('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<EventSummary | null>(null);
+  const [registrationEvent, setRegistrationEvent] = useState<EventSummary | null>(null);
 
-  // 2. State: Lista global de inscritos (mock)
   const [competitors, setCompetitors] = useState<Competitor[]>(INITIAL_COMPETITORS);
+  const [events, setEvents] = useState<EventSummary[]>(REFERENCE_EVENTS);
+  const [arenas, setArenas] = useState<ArenaOption[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    const loadApiData = async () => {
+      const [athletesResponse, eventsResponse, arenasResponse] = await Promise.all([
+        fetch('/api/athletes'),
+        fetch('/api/events'),
+        fetch('/api/arenas'),
+      ]);
+
+      if (!active) return;
+
+      if (athletesResponse.ok && athletesResponse.headers.get('content-type')?.includes('application/json')) {
+        const athletes = await athletesResponse.json() as Array<{
+          id: string;
+          registrationNo: string | null;
+          name: string;
+          city: string | null;
+          headHandicap: number | string;
+          heelHandicap: number | string;
+        }>;
+        setCompetitors(athletes.map((athlete) => ({
+          id: athlete.id,
+          registrationNo: athlete.registrationNo ?? undefined,
+          nome: athlete.name,
+          cidade: athlete.city ?? undefined,
+          handicap: Number(athlete.headHandicap),
+          headHandicap: Number(athlete.headHandicap),
+          heelHandicap: Number(athlete.heelHandicap),
+        })));
+      }
+
+      if (eventsResponse.ok && eventsResponse.headers.get('content-type')?.includes('application/json')) {
+        const apiEvents = await eventsResponse.json() as Array<{
+          id: string;
+          name: string;
+          eventDate: string;
+          status: 'DRAFT' | 'OPEN' | 'DRAWN' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
+          arena: { name: string; city: string; state: string };
+          createdBy: { name: string | null };
+          _count: { registrations: number; draws: number };
+        }>;
+        const statusLabels: Record<typeof apiEvents[number]['status'], EventSummary['status']> = {
+          DRAFT: 'ABERTA',
+          OPEN: 'ABERTA',
+          DRAWN: 'SORTEADA',
+          IN_PROGRESS: 'EM ANDAMENTO',
+          FINISHED: 'FINALIZADA',
+          CANCELLED: 'CANCELADA',
+        };
+        setEvents(apiEvents.map((event) => ({
+          id: event.id,
+          name: event.name,
+          date: new Intl.DateTimeFormat('pt-BR').format(new Date(event.eventDate)),
+          format: 'Todos x Todos',
+          arena: event.arena.name,
+          status: statusLabels[event.status],
+          registeredAthletes: event._count.registrations,
+          runs: event._count.draws,
+          steward: event.createdBy.name ?? undefined,
+        })));
+      }
+
+      if (arenasResponse.ok && arenasResponse.headers.get('content-type')?.includes('application/json')) {
+        const apiArenas = await arenasResponse.json() as ArenaOption[];
+        setArenas(apiArenas);
+      }
+    };
+
+    void loadApiData();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // 3. State: Lista de Pezeiros selecionados (inicia vazia para seleção manual)
   const [selectedPezeiros, setSelectedPezeiros] = useState<Competitor[]>([]);
@@ -140,40 +232,6 @@ export const App: React.FC = () => {
     );
   };
 
-  // Preenchimento simulado de tempos para demonstração da apuração
-  const handleFillSampleTimes = () => {
-    setDrawResults((prev) =>
-      prev.map((run, idx) => {
-        const base = 5.9 + (idx % 6) * 0.45;
-        const b1 = (base + (idx % 3) * 0.25).toFixed(2);
-        const b2 = run.bois >= 2 ? (base + 0.35 + (idx % 2) * 0.3).toFixed(2) : '';
-        const b3 = run.bois >= 3 ? (base + 0.65).toFixed(2) : '';
-
-        // Simula ocasionalmente um NT (ex: corrida 5)
-        const hasNt = idx === 4;
-
-        const newTimes = {
-          boi1: hasNt ? '' : b1,
-          boi2: run.bois >= 2 && !hasNt ? b2 : '',
-          boi3: run.bois >= 3 && !hasNt ? b3 : '',
-          boi1Nt: hasNt,
-          boi2Nt: false,
-          boi3Nt: false,
-        };
-
-        const updatedRun: Run = { ...run, times: newTimes };
-        const { totalTime, mediaFinal, isNt } = calculateRunTotal(updatedRun);
-
-        return {
-          ...updatedRun,
-          totalTime,
-          mediaFinal,
-          isNt,
-        };
-      })
-    );
-  };
-
   // Limpar todos os tempos
   const handleClearAllTimes = () => {
     setDrawResults((prev) =>
@@ -199,173 +257,269 @@ export const App: React.FC = () => {
     setCompetitors((prev) => [newComp, ...prev]);
   };
 
-  const handleResetToDefaultMock = () => {
-    if (window.confirm('Deseja limpar as seleções e reiniciar o fluxo do sorteio?')) {
-      setCompetitors(INITIAL_COMPETITORS);
-      setSelectedCabeceiros([]);
-      setSelectedPezeiros([]);
-      setDrawResults([]);
-      setCurrentStep(1);
+  const handleRemoveCompetitor = (competitor: Competitor) => {
+    setCompetitors((prev) => prev.filter((item) => item.id !== competitor.id));
+    setSelectedCabeceiros((prev) => prev.filter((item) => item.id !== competitor.id));
+    setSelectedPezeiros((prev) => prev.filter((item) => item.id !== competitor.id));
+  };
+
+  const formatEventDate = (value: string) => new Intl.DateTimeFormat('pt-BR').format(new Date(`${value}T12:00:00`));
+
+  const handleCreateEvent = async (input: EventFormInput) => {
+    const response = await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...input, eventDate: new Date(`${input.eventDate}T12:00:00`).toISOString() }),
+    });
+    const isJson = response.headers.get('content-type')?.includes('application/json');
+    if (response.ok && isJson) {
+      const event = await response.json() as { id: string; name: string; eventDate: string; status: 'DRAFT'; arena: { id: string; name: string; city: string; state: string }; createdBy: { name: string | null }; _count: { registrations: number; draws: number } };
+      setArenas((current) => current.some((arena) => arena.id === event.arena.id) ? current : [...current, event.arena]);
+      setEvents((current) => [{
+        id: event.id,
+        name: event.name,
+        date: formatEventDate(event.eventDate),
+        format: 'Todos x Todos',
+        arena: event.arena.name,
+        status: 'ABERTA',
+        registeredAthletes: event._count.registrations,
+        runs: event._count.draws,
+        steward: event.createdBy.name ?? undefined,
+      }, ...current]);
+      return;
+    }
+    if (response.status !== 401 && response.status !== 404 && isJson) {
+      const body = await response.json() as { message?: string };
+      throw new Error(body.message ?? 'Não foi possível criar a prova.');
+    }
+    setEvents((current) => [{
+      id: `local-${Date.now()}`,
+      name: input.name,
+      date: formatEventDate(input.eventDate),
+      format: 'Todos x Todos',
+      arena: input.arenaName,
+      status: 'ABERTA',
+      registeredAthletes: 0,
+      runs: 0,
+      steward: 'Henrique Lagoa',
+    }, ...current]);
+    if (!input.arenaId) {
+      setArenas((current) => [...current, { id: `local-arena-${Date.now()}`, name: input.arenaName, city: input.city, state: input.state }]);
     }
   };
 
-  const handleLoadDemoMock = () => {
-    const defaultCabs = INITIAL_COMPETITORS.slice(0, 15);
-    const defaultPezs = INITIAL_COMPETITORS.slice(15, 30);
-    setCompetitors(INITIAL_COMPETITORS);
-    setSelectedCabeceiros(defaultCabs);
-    setSelectedPezeiros(defaultPezs);
-    const { runs } = executeGroupCrossDraw(defaultCabs, defaultPezs, drawConfig);
-    setDrawResults(runs);
-    setCurrentStep(4);
+  const handleUpdateEvent = async (eventId: string, input: Pick<EventFormInput, 'name' | 'eventDate'>) => {
+    const response = await fetch(`/api/events/${eventId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...input, eventDate: new Date(`${input.eventDate}T12:00:00`).toISOString() }),
+    });
+    const isJson = response.headers.get('content-type')?.includes('application/json');
+    if (!response.ok && response.status !== 401 && response.status !== 404) {
+      const body = isJson ? await response.json() as { message?: string } : null;
+      throw new Error(body?.message ?? 'Não foi possível atualizar a prova.');
+    }
+    setEvents((current) => current.map((event) => event.id === eventId ? { ...event, name: input.name, date: formatEventDate(input.eventDate) } : event));
+  };
+
+  const handleDeleteEvent = async (event: EventSummary) => {
+    if (!window.confirm(`Cancelar a prova "${event.name}"?`)) return;
+    const response = await fetch(`/api/events/${event.id}`, { method: 'DELETE' });
+    const isJson = response.headers.get('content-type')?.includes('application/json');
+    if (!response.ok && response.status !== 401 && response.status !== 404) {
+      const body = isJson ? await response.json() as { message?: string } : null;
+      throw new Error(body?.message ?? 'Não foi possível cancelar a prova.');
+    }
+    setEvents((current) => current.map((item) => item.id === event.id ? { ...item, status: 'CANCELADA' } : item));
+  };
+
+  const handleStartNewDraw = () => {
+    setSelectedCabeceiros([]);
+    setSelectedPezeiros([]);
+    setDrawResults([]);
+    setSearchTerm('');
+    setCurrentStep(1);
+    setShowDashboard(false);
+    setActiveSection('draw');
+  };
+
+  const handleNavigate = (section: AppSection) => {
+    if (section === 'draw') {
+      handleStartNewDraw();
+      return;
+    }
+
+    setActiveSection(section);
+    setSelectedEvent(null);
+    setRegistrationEvent(null);
+    setShowDashboard(section === 'dashboard');
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      {/* Top Navbar */}
-      <header className="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 no-print">
-        <div className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Logo & Brand */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center text-slate-950 font-black shadow-lg shadow-amber-500/20">
-              <Trophy className="w-5 h-5 text-slate-950 stroke-[2.5]" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-extrabold tracking-tight text-white m-0">
-                  Team Roping Pro
-                </h1>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                  Henrique Lagoa
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 m-0">
-                Sorteio Todos x Todos • Baterias A, B e C • Súmula de Tempos
-              </p>
-            </div>
-          </div>
-
-          {/* Quick Info & Actions */}
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={handleLoadDemoMock}
-              className="text-xs text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-amber-500/30 transition cursor-pointer"
-              title="Carregar demonstração completa com 15 cabeceiros e 15 pezeiros"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Exemplo (15×15)</span>
-            </button>
-
-            <button
-              onClick={handleResetToDefaultMock}
-              className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-800 hover:bg-slate-900 transition cursor-pointer"
-              title="Limpar seleções e reiniciar"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Limpar / Reiniciar</span>
-            </button>
-
-            <div className="hidden md:flex items-center gap-2 pl-3 border-l border-slate-800 text-xs">
-              <span className="text-slate-500">Inscritos:</span>
-              <span className="font-mono font-bold text-slate-300">{competitors.length}</span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        {/* Wizard Stepper Navigation */}
-        <div className="no-print">
-          <WizardHeader
-            currentStep={currentStep}
-            onStepClick={(step) => setCurrentStep(step)}
-            pezeirosCount={selectedPezeiros.length}
-            cabeceirosCount={selectedCabeceiros.length}
-            hasDrawResults={drawResults.length > 0}
-          />
-        </div>
-
-        {/* Step 1: Seleção de Pezeiros */}
-        {currentStep === 1 && (
-          <TransferList
-            title="Seleção de Pezeiros (Heelers)"
-            role="pezeiro"
-            availableItems={availablePezeiros}
-            selectedItems={selectedPezeiros}
-            onSelect={handleSelectPezeiro}
-            onDeselect={handleDeselectPezeiro}
-            onSelectAll={handleSelectAllPezeiros}
-            onClearAll={handleClearAllPezeiros}
-            onNext={() => setCurrentStep(2)}
-            nextButtonLabel="Avançar para Cabeceiros"
-            onOpenAddModal={() => setIsModalOpen(true)}
-          />
-        )}
-
-        {/* Step 2: Seleção de Cabeceiros */}
-        {currentStep === 2 && (
-          <TransferList
-            title="Seleção de Cabeceiros (Headers)"
-            role="cabeceiro"
-            availableItems={availableCabeceiros}
-            selectedItems={selectedCabeceiros}
-            onSelect={handleSelectCabeceiro}
-            onDeselect={handleDeselectCabeceiro}
-            onSelectAll={handleSelectAllCabeceiros}
-            onClearAll={handleClearAllCabeceiros}
-            onNext={() => setCurrentStep(3)}
-            onBack={() => setCurrentStep(1)}
-            nextButtonLabel="Avançar para Configuração"
-            onOpenAddModal={() => setIsModalOpen(true)}
-          />
-        )}
-
-        {/* Step 3: Configuração do Sorteio (Baterias A, B, C...) */}
-        {currentStep === 3 && (
-          <DrawConfiguration
-            config={drawConfig}
-            onChangeConfig={setDrawConfig}
-            pezeiros={selectedPezeiros}
-            cabeceiros={selectedCabeceiros}
-            onGenerateDraw={handleGenerateDraw}
-            onBack={() => setCurrentStep(2)}
-          />
-        )}
-
-        {/* Step 4: Ordem de Corrida Final com Entrada de Tempos dos Bois */}
-        {currentStep === 4 && (
-          <RunsTable
-            runs={drawResults}
-            config={drawConfig}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            onReDraw={handleGenerateDraw}
-            onBackToConfig={() => setCurrentStep(3)}
-            onUpdateTime={handleUpdateTime}
-            onFillSampleTimes={handleFillSampleTimes}
-            onClearAllTimes={handleClearAllTimes}
-          />
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-500 no-print">
-        <div className="w-full max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8">
-          <p>
-            Sistema de Sorteios e Gestão de Provas de Laço em Dupla • Desenvolvido com React, TypeScript
-            & Tailwind CSS
-          </p>
-        </div>
-      </footer>
-
-      {/* Modal para Adicionar Novo Competidor */}
-      <NewCompetitorModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onAdd={handleAddNewCompetitor}
+    isLoginOpen ? (
+      <LoginPage
+        onCancel={() => setIsLoginOpen(false)}
+        onAuthenticated={() => setIsLoginOpen(false)}
       />
+    ) : (
+    <div className="flex min-h-screen bg-[#f6f8fa] text-[#2f3b4f]">
+      <Sidebar
+        activeSection={activeSection}
+        isOpen={isSidebarOpen}
+        onNavigate={handleNavigate}
+        onClose={() => setIsSidebarOpen(false)}
+        onOpenLogin={() => setIsLoginOpen(true)}
+      />
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-30 border-b border-[#1e2942] bg-[#111a31] no-print">
+          <div className="flex h-20 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+            <div className="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                aria-label="Abrir menu"
+                onClick={() => setIsSidebarOpen(true)}
+                className="rounded-xl p-2 text-[#c8d2df] transition hover:bg-[#24304b] hover:text-white lg:hidden"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div className="hidden h-10 w-10 items-center justify-center rounded-xl bg-[#e87900] text-[#111a31] shadow-sm sm:flex">
+                <Trophy className="h-5 w-5 stroke-[2.5]" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="truncate text-base font-extrabold tracking-tight text-[#ffffff]">
+                  {showDashboard ? 'Painel geral' : activeSection === 'draw' ? 'Novo sorteio' : 'Gestão de provas'}
+                </h1>
+                <p className="truncate text-xs text-[#b8c2d0]">
+                  Team Roping Pro • Henrique Lagoa
+                </p>
+              </div>
+            </div>
+            <div className="hidden items-center gap-2 text-xs md:flex">
+              <span className="text-[#b8c2d0]">Atletas cadastrados</span>
+              <span className="rounded-lg bg-[#d8f2ed] px-2.5 py-1 font-mono font-bold text-[#176f67]">
+                {competitors.length}
+              </span>
+            </div>
+          </div>
+        </header>
+
+        <main className="mx-auto w-full max-w-[1720px] flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        {showDashboard ? (
+          <Dashboard
+            athleteCount={competitors.length}
+            selectedPezeiros={selectedPezeiros.length}
+            selectedCabeceiros={selectedCabeceiros.length}
+            runs={drawResults}
+            onStartDraw={() => setShowDashboard(false)}
+          />
+        ) : activeSection === 'events' ? (
+          registrationEvent ? (
+            <RegistrationPage event={registrationEvent} athletes={competitors} onBack={() => setRegistrationEvent(null)} />
+          ) : selectedEvent ? (
+            <EventDetailsPage
+              event={selectedEvent}
+              onBack={() => setSelectedEvent(null)}
+              onOpenRegistrations={() => setRegistrationEvent(selectedEvent)}
+            />
+          ) : (
+            <EventsPage events={events} arenas={arenas} onOpenEvent={setSelectedEvent} onCreate={handleCreateEvent} onUpdate={handleUpdateEvent} onDelete={handleDeleteEvent} />
+          )
+        ) : activeSection === 'athletes' ? (
+          <AthletesPage
+            athletes={competitors}
+            onAdd={() => setIsModalOpen(true)}
+            onRemove={handleRemoveCompetitor}
+          />
+        ) : activeSection !== 'draw' && activeSection !== 'dashboard' ? (
+          <SectionPlaceholder
+            section={activeSection}
+            onStartDraw={handleStartNewDraw}
+          />
+        ) : (
+          <>
+            <div className="no-print">
+              <WizardHeader
+                currentStep={currentStep}
+                onStepClick={(step) => setCurrentStep(step)}
+                pezeirosCount={selectedPezeiros.length}
+                cabeceirosCount={selectedCabeceiros.length}
+                hasDrawResults={drawResults.length > 0}
+              />
+            </div>
+
+            {currentStep === 1 && (
+              <TransferList
+                title="Seleção de Pezeiros"
+                role="pezeiro"
+                availableItems={availablePezeiros}
+                selectedItems={selectedPezeiros}
+                onSelect={handleSelectPezeiro}
+                onDeselect={handleDeselectPezeiro}
+                onSelectAll={handleSelectAllPezeiros}
+                onClearAll={handleClearAllPezeiros}
+                onNext={() => setCurrentStep(2)}
+                nextButtonLabel="Avançar para cabeceiros"
+                onOpenAddModal={() => setIsModalOpen(true)}
+              />
+            )}
+
+            {currentStep === 2 && (
+              <TransferList
+                title="Seleção de Cabeceiros"
+                role="cabeceiro"
+                availableItems={availableCabeceiros}
+                selectedItems={selectedCabeceiros}
+                onSelect={handleSelectCabeceiro}
+                onDeselect={handleDeselectCabeceiro}
+                onSelectAll={handleSelectAllCabeceiros}
+                onClearAll={handleClearAllCabeceiros}
+                onNext={() => setCurrentStep(3)}
+                onBack={() => setCurrentStep(1)}
+                nextButtonLabel="Avançar para configuração"
+                onOpenAddModal={() => setIsModalOpen(true)}
+              />
+            )}
+
+            {currentStep === 3 && (
+              <DrawConfiguration
+                config={drawConfig}
+                onChangeConfig={setDrawConfig}
+                pezeiros={selectedPezeiros}
+                cabeceiros={selectedCabeceiros}
+                onGenerateDraw={handleGenerateDraw}
+                onBack={() => setCurrentStep(2)}
+              />
+            )}
+
+            {currentStep === 4 && (
+              <RunsTable
+                runs={drawResults}
+                config={drawConfig}
+                searchTerm={searchTerm}
+                onSearchChange={setSearchTerm}
+                onReDraw={handleGenerateDraw}
+                onBackToConfig={() => setCurrentStep(3)}
+                onUpdateTime={handleUpdateTime}
+                onClearAllTimes={handleClearAllTimes}
+              />
+            )}
+          </>
+        )}
+        </main>
+
+        <footer className="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-500 no-print">
+          <p>Sistema de gestão de provas de laço em dupla • Henrique Lagoa</p>
+        </footer>
+
+        <NewCompetitorModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onAdd={handleAddNewCompetitor}
+        />
+      </div>
     </div>
+    )
   );
 };
 
