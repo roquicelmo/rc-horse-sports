@@ -236,6 +236,8 @@ O frontend atual continua funcional sem banco durante a transição. O uso de da
   código: deve ser fornecida por `SEED_ADMIN_PASSWORD`.
 - Cliente Auth.js corrigido para usar `/api/auth/csrf`, `/api/auth/callback/credentials`
   e `/api/auth/signout`, mantendo cookies e proteção CSRF no fluxo real de login.
+- Prisma usa `DATABASE_URL_POOLED` para runtime e `DATABASE_URL` para migrations.
+  As credenciais nunca devem ser commitadas, documentadas ou enviadas em mensagens.
 - Prisma usa `DATABASE_URL` para runtime pooled e `DIRECT_URL` para migrations. As
   credenciais nunca devem ser commitadas, documentadas ou enviadas em mensagens.
 - Próximo passo: migrar as listas, configuração e súmula para classes semânticas e remover a camada de compatibilidade.
