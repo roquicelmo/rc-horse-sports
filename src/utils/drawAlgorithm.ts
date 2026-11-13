@@ -1,4 +1,4 @@
-import type { Competitor, DrawConfig, Run, BatteryMode } from '../types/roping';
+import type { Competitor, DrawConfig, Run, BatteryMode } from '../types/roping.js';
 
 export function calculateBois(shc: number): 1 | 2 | 3 {
   // Regra de Exibição dos Bois:
@@ -631,4 +631,3 @@ export function calculateRunTotal(run: Run): {
   }
   return { totalTime: null, mediaFinal: null, isNt: false };
 }
-

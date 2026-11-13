@@ -5,6 +5,9 @@ import type { EventSummary } from '../types/events';
 interface EventsPageProps {
   events: EventSummary[];
   arenas: ArenaOption[];
+  owners?: Array<{ id: string; name: string | null; email: string }>;
+  canFilterOwners?: boolean;
+  defaultOwnerId?: string;
   onOpenEvent: (event: EventSummary) => void;
   onCreate: (input: EventFormInput) => Promise<void>;
   onUpdate: (eventId: string, input: Pick<EventFormInput, 'name' | 'eventDate'>) => Promise<void>;
@@ -18,6 +21,7 @@ export interface EventFormInput {
   arenaName: string;
   city: string;
   state: string;
+  ownerId?: string;
 }
 
 export interface ArenaOption {
@@ -29,23 +33,24 @@ export interface ArenaOption {
 
 const emptyForm: EventFormInput = { name: '', eventDate: '', arenaName: '', city: '', state: '' };
 
-export const EventsPage: React.FC<EventsPageProps> = ({ events, arenas, onOpenEvent, onCreate, onUpdate, onDelete }) => {
+export const EventsPage: React.FC<EventsPageProps> = ({ events, arenas, owners = [], canFilterOwners = false, defaultOwnerId, onOpenEvent, onCreate, onUpdate, onDelete }) => {
   const [form, setForm] = useState<EventFormInput>(emptyForm);
   const [editing, setEditing] = useState<EventSummary | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [saving, setSaving] = useState(false);
+  const [ownerId, setOwnerId] = useState('');
 
   const openCreate = () => {
     setEditing(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, ownerId: defaultOwnerId });
     setFeedback('');
     setIsFormOpen(true);
   };
 
   const openEdit = (event: EventSummary) => {
     setEditing(event);
-    setForm({ name: event.name, eventDate: event.date.split('/').reverse().join('-'), arenaName: event.arena, city: '', state: '' });
+    setForm({ name: event.name, eventDate: event.date.split('/').reverse().join('-'), arenaName: event.arena, city: '', state: '', ownerId: event.ownerId });
     setFeedback('');
     setIsFormOpen(true);
   };
@@ -58,7 +63,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({ events, arenas, onOpenEv
       if (editing) await onUpdate(editing.id, { name: form.name, eventDate: form.eventDate });
       else await onCreate(form);
       setEditing(null);
-      setForm(emptyForm);
+      setForm({ ...emptyForm, ownerId: defaultOwnerId });
       setIsFormOpen(false);
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : 'Não foi possível salvar a prova.');
@@ -96,7 +101,8 @@ export const EventsPage: React.FC<EventsPageProps> = ({ events, arenas, onOpenEv
     </div>
 
     <div className="space-y-4">
-      {events.map((event) => (
+      {canFilterOwners && <div className="flex justify-end"><select value={ownerId} onChange={(event) => setOwnerId(event.target.value)} className="rounded-xl border border-[#dfe6ed] bg-white px-3 py-2.5 text-sm text-[#172036] outline-none focus:border-[#218f83]"><option value="">Todos os proprietários</option>{owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.name ?? owner.email}</option>)}</select></div>}
+      {events.filter((event) => !ownerId || event.ownerId === ownerId).map((event) => (
         <article key={event.id} className="rounded-2xl border border-[#dfe6ed] bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 border-b border-[#eef1f4] pb-5 lg:flex-row lg:items-start lg:justify-between">
             <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-[#2f3b4f]">
@@ -124,6 +130,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({ events, arenas, onOpenEv
           <div className="flex flex-col gap-3 py-5 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <h3 className="text-xl font-extrabold tracking-tight text-[#172036]">{event.name}</h3>
+              {canFilterOwners && <p className="mt-1 text-xs font-semibold text-[#6b788b]">Proprietário: {event.ownerName ?? 'Sem atribuição'}</p>}
               <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-[#6b788b]">
                 <span className="inline-flex items-center gap-2"><MapPin className="h-4 w-4 text-[#8290a1]" />{event.arena}</span>
                 {event.steward && <span className="inline-flex items-center gap-2"><Users className="h-4 w-4 text-[#8290a1]" />Mesário: {event.steward}</span>}
@@ -163,6 +170,7 @@ export const EventsPage: React.FC<EventsPageProps> = ({ events, arenas, onOpenEv
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#218f83]">{editing ? 'Editar prova' : 'Nova prova'}</p>
               <h3 id="event-form-title" className="mt-2 text-xl font-extrabold text-[#172036]">{editing ? 'Atualizar dados da prova' : 'Cadastrar uma prova'}</h3>
             </div>
+            {canFilterOwners && <label className="mt-4 block text-sm font-bold text-[#526276]">Proprietário<select value={form.ownerId ?? ''} onChange={(event) => setForm({ ...form, ownerId: event.target.value })} className="mt-1 w-full rounded-xl border border-[#dfe6ed] px-3 py-3 font-normal text-[#172036] outline-none focus:border-[#218f83]"><option value="">Selecione o proprietário</option>{owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.name ?? owner.email}</option>)}</select></label>}
             <button type="button" onClick={() => { setEditing(null); setForm(emptyForm); setIsFormOpen(false); }} className="rounded-lg px-2 py-1 text-xl text-[#8290a1] hover:bg-[#eef3f6]" aria-label="Fechar formulário">×</button>
           </div>
           {feedback && <p className="mt-4 rounded-xl bg-[#fff8e9] px-4 py-3 text-sm font-semibold text-[#8b5a00]">{feedback}</p>}

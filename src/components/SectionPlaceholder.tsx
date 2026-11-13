@@ -24,6 +24,10 @@ const content: Record<SectionPlaceholderProps['section'], { title: string; descr
     title: 'Usuários',
     description: 'Gerencie os acessos da equipe e as permissões de cada função do sistema.',
   },
+  reports: {
+    title: 'Relatórios',
+    description: 'Acompanhe indicadores consolidados por usuário, período e status.',
+  },
 };
 
 export const SectionPlaceholder: React.FC<SectionPlaceholderProps> = ({ section, onStartDraw }) => {

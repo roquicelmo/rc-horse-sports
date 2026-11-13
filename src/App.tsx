@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import type {
@@ -6,7 +8,6 @@ import type {
   Run,
   WizardStep,
 } from './types/roping';
-import { INITIAL_COMPETITORS } from './data/referenceAthletes';
 import { executeGroupCrossDraw, calculateRunTotal } from './utils/drawAlgorithm';
 import { Dashboard } from './components/Dashboard';
 import { SectionPlaceholder } from './components/SectionPlaceholder';
@@ -19,26 +20,132 @@ import { NewCompetitorModal } from './components/NewCompetitorModal';
 import { LoginPage } from './components/LoginPage';
 import { AthletesPage } from './components/AthletesPage';
 import { EventsPage } from './components/EventsPage';
-import { REFERENCE_EVENTS } from './data/referenceEvents';
 import type { EventSummary } from './types/events';
 import { EventDetailsPage } from './components/EventDetailsPage';
 import { RegistrationPage } from './components/RegistrationPage';
+import { AnnouncerPage } from './components/AnnouncerPage';
+import { ResultsPage } from './components/ResultsPage';
+import { AgendaPage } from './components/AgendaPage';
+import { ReportsPage } from './components/ReportsPage';
+import { UsersPage } from './components/UsersPage';
 import type { ArenaOption, EventFormInput } from './components/EventsPage';
+import { authClient, type AuthSession } from './auth/session';
 import { Menu, Trophy } from 'lucide-react';
 
+interface PersistedAthlete {
+  id: string;
+  registrationNo: string | null;
+  name: string;
+  city: string | null;
+  headHandicap: number | string;
+  heelHandicap: number | string;
+  ownerId?: string | null;
+  owner?: { name: string | null };
+}
+
+interface PersistedRun {
+  id: string;
+  runNumber: number;
+  phase: number;
+  round: number;
+  battery: number;
+  headGroup: string | null;
+  heelGroup: string | null;
+  combinedHandicap: number | string;
+  numberOfBulls: number;
+  totalTime: number | string | null;
+  averageTime: number | string | null;
+  isNt: boolean;
+  headAthlete: PersistedAthlete;
+  heelAthlete: PersistedAthlete;
+  times: Array<{ bullNumber: number; timeSeconds: number | string | null; isNt: boolean }>;
+}
+
+const persistedAthleteToCompetitor = (athlete: PersistedAthlete, role: 'head' | 'heel'): Competitor => {
+  const headHandicap = Number(athlete.headHandicap);
+  const heelHandicap = Number(athlete.heelHandicap);
+  return {
+    id: athlete.id,
+    registrationNo: athlete.registrationNo ?? undefined,
+    nome: athlete.name,
+    cidade: athlete.city ?? undefined,
+    handicap: role === 'head' ? headHandicap : heelHandicap,
+    headHandicap,
+    heelHandicap,
+  };
+};
+
+const mapPersistedRuns = (runs: PersistedRun[]): Run[] => runs.map((run) => {
+  const headGroup = run.headGroup ?? '?';
+  const heelGroup = run.heelGroup ?? '?';
+  const persistedTimes = new Map(run.times.map((time) => [time.bullNumber, time]));
+  const boiTime = (bullNumber: number) => persistedTimes.get(bullNumber);
+  const first = boiTime(1);
+  const second = boiTime(2);
+  const third = boiTime(3);
+  return {
+    id: run.id,
+    numero: run.runNumber,
+    fase: run.phase,
+    faseLabel: `Fase ${run.phase}: Cabeceiros ${headGroup} × Pezeiros ${heelGroup}`,
+    bateria: run.battery,
+    bateriaLabel: `Bateria ${run.battery}`,
+    cruzamento: `${headGroup} × ${heelGroup}`,
+    rodada: run.round,
+    cabeceiro: persistedAthleteToCompetitor(run.headAthlete, 'head'),
+    pezeiro: persistedAthleteToCompetitor(run.heelAthlete, 'heel'),
+    cabeceiroGrupo: headGroup,
+    pezeiroGrupo: heelGroup,
+    shc: Number(run.combinedHandicap),
+    bois: Math.min(3, Math.max(1, run.numberOfBulls)) as 1 | 2 | 3,
+    times: {
+      boi1: first?.timeSeconds === null || first?.timeSeconds === undefined ? '' : String(first.timeSeconds),
+      boi2: second?.timeSeconds === null || second?.timeSeconds === undefined ? '' : String(second.timeSeconds),
+      boi3: third?.timeSeconds === null || third?.timeSeconds === undefined ? '' : String(third.timeSeconds),
+      boi1Nt: first?.isNt ?? false,
+      boi2Nt: second?.isNt ?? false,
+      boi3Nt: third?.isNt ?? false,
+    },
+    totalTime: run.totalTime === null ? null : Number(run.totalTime),
+    mediaFinal: run.averageTime === null ? null : Number(run.averageTime),
+    isNt: run.isNt,
+  };
+});
+
 export const App: React.FC = () => {
+  const [authSession, setAuthSession] = useState<AuthSession | null | undefined>(undefined);
   // 1. Wizard Current Step: 1, 2, 3, 4
   const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [showDashboard, setShowDashboard] = useState(true);
   const [activeSection, setActiveSection] = useState<AppSection>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EventSummary | null>(null);
   const [registrationEvent, setRegistrationEvent] = useState<EventSummary | null>(null);
+  const [drawEvent, setDrawEvent] = useState<EventSummary | null>(null);
+  const [announcerEvent, setAnnouncerEvent] = useState<EventSummary | null>(null);
+  const [resultsEvent, setResultsEvent] = useState<EventSummary | null>(null);
+  const [resultsPublished, setResultsPublished] = useState(false);
 
-  const [competitors, setCompetitors] = useState<Competitor[]>(INITIAL_COMPETITORS);
-  const [events, setEvents] = useState<EventSummary[]>(REFERENCE_EVENTS);
+  useEffect(() => {
+    void authClient.getSession()
+      .then((session) => setAuthSession(session))
+      .catch(() => setAuthSession(null));
+  }, []);
+
+  const [drawError, setDrawError] = useState<string | null>(null);
+
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
+  const [events, setEvents] = useState<EventSummary[]>([]);
   const [arenas, setArenas] = useState<ArenaOption[]>([]);
+  const [managedUsers, setManagedUsers] = useState<Array<{ id: string; name: string | null; email: string }>>([]);
+
+  useEffect(() => {
+    if (!authSession || !['ADMIN', 'MANAGER', 'ORGANIZER'].includes(authSession.user.role)) return;
+    void fetch('/api/users')
+      .then(async (response) => response.ok ? response.json() as Promise<Array<{ id: string; name: string | null; email: string }>> : [])
+      .then(setManagedUsers)
+      .catch(() => setManagedUsers([]));
+  }, [authSession]);
 
   useEffect(() => {
     let active = true;
@@ -59,6 +166,8 @@ export const App: React.FC = () => {
           city: string | null;
           headHandicap: number | string;
           heelHandicap: number | string;
+          ownerId?: string | null;
+          owner?: { name: string | null };
         }>;
         setCompetitors(athletes.map((athlete) => ({
           id: athlete.id,
@@ -68,6 +177,8 @@ export const App: React.FC = () => {
           handicap: Number(athlete.headHandicap),
           headHandicap: Number(athlete.headHandicap),
           heelHandicap: Number(athlete.heelHandicap),
+          ownerId: athlete.ownerId ?? undefined,
+          ownerName: athlete.owner?.name ?? undefined,
         })));
       }
 
@@ -78,7 +189,7 @@ export const App: React.FC = () => {
           eventDate: string;
           status: 'DRAFT' | 'OPEN' | 'DRAWN' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED';
           arena: { name: string; city: string; state: string };
-          createdBy: { name: string | null };
+          createdBy: { id: string; name: string | null; email: string };
           _count: { registrations: number; draws: number };
         }>;
         const statusLabels: Record<typeof apiEvents[number]['status'], EventSummary['status']> = {
@@ -99,6 +210,8 @@ export const App: React.FC = () => {
           registeredAthletes: event._count.registrations,
           runs: event._count.draws,
           steward: event.createdBy.name ?? undefined,
+          ownerId: event.createdBy.id,
+          ownerName: event.createdBy.name ?? event.createdBy.email,
         })));
       }
 
@@ -183,9 +296,32 @@ export const App: React.FC = () => {
   };
 
   // Disparo do Sorteio Oficial com Cruzamento Todos contra Todos (A, B, C...)
-  const handleGenerateDraw = () => {
+  const handleGenerateDraw = async () => {
+    if (drawEvent?.id && !drawEvent.id.startsWith('local-')) {
+      const response = await fetch(`/api/events/${drawEvent.id}/draws`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(drawConfig),
+      });
+      const isJson = response.headers.get('content-type')?.includes('application/json');
+      if (response.ok && isJson) {
+        const persisted = await response.json() as { runs: PersistedRun[] };
+        setDrawResults(mapPersistedRuns(persisted.runs));
+        setDrawError(null);
+        setSearchTerm('');
+        setCurrentStep(4);
+        return;
+      }
+      if (isJson) {
+        const body = await response.json() as { message?: string };
+        setDrawError(body.message ?? 'Não foi possível persistir o sorteio.');
+        return;
+      }
+    }
+
     const { runs } = executeGroupCrossDraw(selectedCabeceiros, selectedPezeiros, drawConfig);
     setDrawResults(runs);
+    setDrawError(null);
     setSearchTerm('');
     setCurrentStep(4);
 
@@ -201,8 +337,117 @@ export const App: React.FC = () => {
     }
   };
 
+  const handleOpenDraw = async (event: EventSummary) => {
+    setAnnouncerEvent(null);
+    setDrawEvent(event);
+    setSelectedEvent(null);
+    setRegistrationEvent(null);
+    setDrawError(null);
+    setActiveSection('draw');
+    setShowDashboard(false);
+
+    if (event.id.startsWith('local-')) {
+      setSelectedCabeceiros([]);
+      setSelectedPezeiros([]);
+      setDrawResults([]);
+      setCurrentStep(1);
+      return;
+    }
+
+    const [registrationsResponse, drawsResponse] = await Promise.all([
+      fetch(`/api/events/${event.id}/registrations`),
+      fetch(`/api/events/${event.id}/draws`),
+    ]);
+    const isRegistrationJson = registrationsResponse.headers.get('content-type')?.includes('application/json');
+    if (!registrationsResponse.ok || !isRegistrationJson) {
+      setDrawError('Não foi possível carregar as inscrições desta prova.');
+      return;
+    }
+
+    const athleteById = new Map(competitors.map((competitor) => [competitor.id, competitor]));
+    const registrations = await registrationsResponse.json() as Array<{ category: 'CABECEIRO' | 'PEZEIRO'; athlete: { id: string } }>;
+    setSelectedCabeceiros(registrations.filter((item) => item.category === 'CABECEIRO').map((item) => athleteById.get(item.athlete.id)).filter((item): item is Competitor => Boolean(item)));
+    setSelectedPezeiros(registrations.filter((item) => item.category === 'PEZEIRO').map((item) => athleteById.get(item.athlete.id)).filter((item): item is Competitor => Boolean(item)));
+
+    if (drawsResponse.ok && drawsResponse.headers.get('content-type')?.includes('application/json')) {
+      const draws = await drawsResponse.json() as Array<{ configuration: DrawConfig; runs: PersistedRun[] }>;
+      const latest = draws[0];
+      if (latest) {
+        setDrawConfig(latest.configuration);
+        setDrawResults(mapPersistedRuns(latest.runs));
+        setCurrentStep(4);
+        return;
+      }
+    }
+    setDrawResults([]);
+    setCurrentStep(3);
+  };
+
+  const handleOpenAnnouncer = async (event: EventSummary) => {
+    setDrawError(null);
+    if (event.id.startsWith('local-')) {
+      setDrawError('A tela do locutor precisa de um sorteio persistido.');
+      return;
+    }
+    const response = await fetch(`/api/events/${event.id}/draws`);
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+      setDrawError('Não foi possível carregar o sorteio desta prova.');
+      return;
+    }
+    const draws = await response.json() as Array<{ runs: PersistedRun[] }>;
+    if (!draws[0]?.runs.length) {
+      setDrawError('Gere o sorteio antes de abrir a tela do locutor.');
+      return;
+    }
+    setDrawResults(mapPersistedRuns(draws[0].runs));
+    setDrawEvent(event);
+    setAnnouncerEvent(event);
+    setSelectedEvent(null);
+    setActiveSection('events');
+    setShowDashboard(false);
+  };
+
+  const handleOpenResults = async (event: EventSummary) => {
+    setDrawError(null);
+    if (event.id.startsWith('local-')) {
+      setDrawError('O resultado final precisa de um sorteio persistido.');
+      return;
+    }
+    const response = await fetch(`/api/events/${event.id}/draws`);
+    if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) {
+      setDrawError('Não foi possível carregar o resultado desta prova.');
+      return;
+    }
+    const draws = await response.json() as Array<{ status: string; runs: PersistedRun[] }>;
+    if (!draws[0]?.runs.length) {
+      setDrawError('Ainda não há corridas geradas para esta prova.');
+      return;
+    }
+    setDrawResults(mapPersistedRuns(draws[0].runs));
+    setResultsPublished(draws[0].status === 'PUBLISHED');
+    setResultsEvent(event);
+    setSelectedEvent(null);
+    setActiveSection('events');
+    setShowDashboard(false);
+  };
+
+  const handlePublishResults = async () => {
+    if (!resultsEvent) return;
+    const response = await fetch(`/api/events/${resultsEvent.id}/results/publish`, { method: 'POST' });
+    const isJson = response.headers.get('content-type')?.includes('application/json');
+    if (!response.ok) {
+      const body = isJson ? await response.json() as { message?: string } : null;
+      setDrawError(body?.message ?? 'Não foi possível publicar os resultados.');
+      return;
+    }
+    setResultsPublished(true);
+    setEvents((current) => current.map((event) => event.id === resultsEvent.id ? { ...event, status: 'FINALIZADA' } : event));
+    setDrawError(null);
+  };
+
   // Atualização em tempo real do tempo de uma corrida por Boi (1, 2 ou 3)
-  const handleUpdateTime = (runId: string, boi: 1 | 2 | 3, value: string, isNt?: boolean) => {
+  const handleUpdateTime = async (runId: string, boi: 1 | 2 | 3, value: string, isNt?: boolean) => {
+    const currentRun = drawResults.find((run) => run.id === runId);
     setDrawResults((prev) =>
       prev.map((run) => {
         if (run.id !== runId) return run;
@@ -230,10 +475,29 @@ export const App: React.FC = () => {
         };
       })
     );
+    if (drawEvent?.id && !drawEvent.id.startsWith('local-') && currentRun) {
+      const response = await fetch(`/api/runs/${runId}/times`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bullNumber: boi,
+          timeSeconds: value.trim() === '' ? null : Number(value),
+          isNt: isNt ?? Boolean(boi === 1 ? currentRun.times.boi1Nt : boi === 2 ? currentRun.times.boi2Nt : currentRun.times.boi3Nt),
+        }),
+      });
+      if (!response.ok) {
+        setDrawError('O tempo foi alterado localmente, mas não pôde ser salvo no banco.');
+      } else {
+        setDrawError(null);
+      }
+    }
   };
 
   // Limpar todos os tempos
-  const handleClearAllTimes = () => {
+  const handleClearAllTimes = async () => {
+    const persistentRunIds = drawEvent?.id && !drawEvent.id.startsWith('local-')
+      ? drawResults.map((run) => run.id)
+      : [];
     setDrawResults((prev) =>
       prev.map((run) => ({
         ...run,
@@ -250,10 +514,43 @@ export const App: React.FC = () => {
         isNt: false,
       }))
     );
+    await Promise.all(persistentRunIds.flatMap((runId) =>
+      [1, 2, 3].map((bullNumber) => fetch(`/api/runs/${runId}/times`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bullNumber, timeSeconds: null, isNt: false }),
+      }))
+    ));
   };
 
   // Reseta ou adiciona novo competidor
-  const handleAddNewCompetitor = (newComp: Competitor) => {
+  const handleAddNewCompetitor = async (newComp: Competitor) => {
+    const response = await fetch('/api/athletes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: newComp.nome,
+        city: newComp.cidade,
+        headHandicap: newComp.headHandicap ?? newComp.handicap,
+        heelHandicap: newComp.heelHandicap ?? newComp.handicap,
+        ownerId: newComp.ownerId,
+      }),
+    });
+    if (response.ok && response.headers.get('content-type')?.includes('application/json')) {
+      const athlete = await response.json() as { id: string; registrationNo?: string | null; name: string; city?: string | null; headHandicap: number | string; heelHandicap: number | string; ownerId?: string | null; owner?: { name: string | null } };
+      setCompetitors((prev) => [{
+        id: athlete.id,
+        registrationNo: athlete.registrationNo ?? undefined,
+        nome: athlete.name,
+        cidade: athlete.city ?? undefined,
+        handicap: Number(athlete.headHandicap),
+        headHandicap: Number(athlete.headHandicap),
+        heelHandicap: Number(athlete.heelHandicap),
+        ownerId: athlete.ownerId ?? undefined,
+        ownerName: athlete.owner?.name ?? undefined,
+      }, ...prev]);
+      return;
+    }
     setCompetitors((prev) => [newComp, ...prev]);
   };
 
@@ -273,7 +570,7 @@ export const App: React.FC = () => {
     });
     const isJson = response.headers.get('content-type')?.includes('application/json');
     if (response.ok && isJson) {
-      const event = await response.json() as { id: string; name: string; eventDate: string; status: 'DRAFT'; arena: { id: string; name: string; city: string; state: string }; createdBy: { name: string | null }; _count: { registrations: number; draws: number } };
+      const event = await response.json() as { id: string; name: string; eventDate: string; status: 'DRAFT'; arena: { id: string; name: string; city: string; state: string }; createdBy: { id: string; name: string | null; email: string }; _count: { registrations: number; draws: number } };
       setArenas((current) => current.some((arena) => arena.id === event.arena.id) ? current : [...current, event.arena]);
       setEvents((current) => [{
         id: event.id,
@@ -285,6 +582,8 @@ export const App: React.FC = () => {
         registeredAthletes: event._count.registrations,
         runs: event._count.draws,
         steward: event.createdBy.name ?? undefined,
+        ownerId: event.createdBy.id,
+        ownerName: event.createdBy.name ?? event.createdBy.email,
       }, ...current]);
       return;
     }
@@ -352,14 +651,26 @@ export const App: React.FC = () => {
     setActiveSection(section);
     setSelectedEvent(null);
     setRegistrationEvent(null);
+    setAnnouncerEvent(null);
+    setResultsEvent(null);
     setShowDashboard(section === 'dashboard');
   };
 
+  const handleLogout = async () => {
+    await authClient.logout();
+    setAuthSession(null);
+  };
+
   return (
-    isLoginOpen ? (
+    authSession === undefined ? (
+      <div className="flex min-h-screen items-center justify-center bg-[#f6f8fa] text-sm font-semibold text-[#6b788b]">Carregando sessão...</div>
+    ) : !authSession ? (
       <LoginPage
-        onCancel={() => setIsLoginOpen(false)}
-        onAuthenticated={() => setIsLoginOpen(false)}
+        onAuthenticated={() => {
+          void authClient.getSession().then((session) => {
+            setAuthSession(session);
+          });
+        }}
       />
     ) : (
     <div className="flex min-h-screen bg-[#f6f8fa] text-[#2f3b4f]">
@@ -368,7 +679,7 @@ export const App: React.FC = () => {
         isOpen={isSidebarOpen}
         onNavigate={handleNavigate}
         onClose={() => setIsSidebarOpen(false)}
-        onOpenLogin={() => setIsLoginOpen(true)}
+        onLogout={() => void handleLogout()}
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -400,6 +711,9 @@ export const App: React.FC = () => {
               <span className="rounded-lg bg-[#d8f2ed] px-2.5 py-1 font-mono font-bold text-[#176f67]">
                 {competitors.length}
               </span>
+              <button type="button" onClick={() => void handleLogout()} className="ml-3 rounded-lg px-2.5 py-1.5 font-bold text-[#dce5ef] transition hover:bg-[#24304b] hover:text-white">
+                Sair
+              </button>
             </div>
           </div>
         </header>
@@ -411,26 +725,55 @@ export const App: React.FC = () => {
             selectedPezeiros={selectedPezeiros.length}
             selectedCabeceiros={selectedCabeceiros.length}
             runs={drawResults}
+            events={events}
+            owners={managedUsers}
+            canFilterOwners={['ADMIN', 'MANAGER', 'ORGANIZER'].includes(authSession.user.role)}
             onStartDraw={() => setShowDashboard(false)}
           />
         ) : activeSection === 'events' ? (
-          registrationEvent ? (
+          resultsEvent ? (
+            <ResultsPage
+              event={resultsEvent}
+              runs={drawResults}
+              published={resultsPublished}
+              onBack={() => { setResultsEvent(null); setSelectedEvent(resultsEvent); }}
+              onPublish={() => void handlePublishResults()}
+            />
+          ) : announcerEvent ? (
+            <AnnouncerPage
+              event={announcerEvent}
+              runs={drawResults}
+              onBack={() => { setAnnouncerEvent(null); setSelectedEvent(announcerEvent); }}
+              onOpenRun={() => { setAnnouncerEvent(null); setCurrentStep(4); setActiveSection('draw'); setDrawEvent(announcerEvent); }}
+            />
+          ) : registrationEvent ? (
             <RegistrationPage event={registrationEvent} athletes={competitors} onBack={() => setRegistrationEvent(null)} />
           ) : selectedEvent ? (
             <EventDetailsPage
               event={selectedEvent}
               onBack={() => setSelectedEvent(null)}
               onOpenRegistrations={() => setRegistrationEvent(selectedEvent)}
+              onOpenDraw={() => void handleOpenDraw(selectedEvent)}
+              onOpenAnnouncer={() => void handleOpenAnnouncer(selectedEvent)}
+              onOpenResults={() => void handleOpenResults(selectedEvent)}
             />
           ) : (
-            <EventsPage events={events} arenas={arenas} onOpenEvent={setSelectedEvent} onCreate={handleCreateEvent} onUpdate={handleUpdateEvent} onDelete={handleDeleteEvent} />
+            <EventsPage events={events} arenas={arenas} owners={managedUsers} defaultOwnerId={authSession.user.id} canFilterOwners={['ADMIN', 'MANAGER', 'ORGANIZER'].includes(authSession.user.role)} onOpenEvent={setSelectedEvent} onCreate={handleCreateEvent} onUpdate={handleUpdateEvent} onDelete={handleDeleteEvent} />
           )
         ) : activeSection === 'athletes' ? (
           <AthletesPage
             athletes={competitors}
+            owners={managedUsers}
+            canFilterOwners={['ADMIN', 'MANAGER', 'ORGANIZER'].includes(authSession.user.role)}
             onAdd={() => setIsModalOpen(true)}
             onRemove={handleRemoveCompetitor}
           />
+        ) : activeSection === 'agenda' ? (
+          <AgendaPage events={events} owners={managedUsers} canFilterOwners={['ADMIN', 'MANAGER', 'ORGANIZER'].includes(authSession.user.role)} />
+        ) : activeSection === 'reports' ? (
+          <ReportsPage owners={managedUsers} canFilterOwners={['ADMIN', 'MANAGER', 'ORGANIZER'].includes(authSession.user.role)} />
+        ) : activeSection === 'users' && (authSession.user.role === 'ADMIN' || authSession.user.role === 'MANAGER' || authSession.user.role === 'ORGANIZER') ? (
+            <UsersPage role={authSession.user.role} />
         ) : activeSection !== 'draw' && activeSection !== 'dashboard' ? (
           <SectionPlaceholder
             section={activeSection}
@@ -438,6 +781,11 @@ export const App: React.FC = () => {
           />
         ) : (
           <>
+            {drawError && (
+              <div role="alert" className="mb-5 rounded-xl border border-[#f2c7c2] bg-[#fff4f2] px-4 py-3 text-sm font-semibold text-[#a33d32]">
+                {drawError}
+              </div>
+            )}
             <div className="no-print">
               <WizardHeader
                 currentStep={currentStep}
@@ -516,6 +864,9 @@ export const App: React.FC = () => {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onAdd={handleAddNewCompetitor}
+          owners={managedUsers}
+          defaultOwnerId={authSession?.user.id}
+          canAssignOwner={['ADMIN', 'MANAGER', 'ORGANIZER'].includes(authSession?.user.role ?? '')}
         />
       </div>
     </div>

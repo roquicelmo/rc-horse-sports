@@ -1,251 +1,392 @@
 # Sorteios Lagoa — documentação técnica
 
-## Visão geral
+## 1. Visão geral
 
-O produto é uma plataforma de gestão de provas de laço em dupla, com cadastro de atletas, inscrições, geração de sorteios, operação de pista e publicação de resultados.
+Sorteios Lagoa é uma aplicação web para gestão de provas de laço em dupla:
 
-O frontend atual é um protótipo React/Vite. A evolução planejada mantém o algoritmo de sorteio e substitui o estado local por uma API persistente em PostgreSQL, usando Prisma ORM e implantação na Vercel.
+- cadastro persistente de atletas e arenas;
+- criação e administração de provas;
+- inscrições por prova;
+- geração persistente de sorteios;
+- operação de pista e lançamento de tempos;
+- locução;
+- publicação de resultados;
+- relatórios administrativos;
+- autenticação, papéis e isolamento por proprietário.
 
-## Plano de ação por blocos
+A aplicação não possui mais modo protótipo em runtime. Os dados operacionais são
+consultados e alterados por API e persistidos em PostgreSQL.
 
-### Bloco 1 — Fundação e contrato do domínio
+## 2. Stack e execução
 
-- Definir o domínio persistente em Prisma/PostgreSQL.
-- Documentar arquitetura, rotas e responsabilidades.
-- Criar configuração segura para ambientes local, preview e produção.
-- Preservar o protótipo atual enquanto a API ainda não existe.
+- Next.js 16, com App Router para a aplicação web;
+- React 19 e TypeScript;
+- Tailwind CSS 4;
+- componentes React reutilizáveis em `src/components`;
+- Prisma 6.19.0;
+- PostgreSQL;
+- Auth.js Core 0.41.3 com Prisma Adapter;
+- `bcryptjs` para verificação de senhas;
+- Zod para validação de payloads;
+- Vercel para deploy;
+- Google reCAPTCHA no formulário público de solicitação de acesso.
 
-### Bloco 2 — Identidade e acesso
+Comandos principais:
 
-- Criar login, logout, recuperação de senha e sessão persistente.
-- Implementar usuários, papéis e permissões.
-- Proteger rotas e operações no servidor.
-- Registrar auditoria das ações administrativas.
+```bash
+npm run dev       # Next em desenvolvimento
+npm run build     # prisma generate + next build
+npm run start     # inicia o build de produção
+npm run lint      # oxlint
 
-Durante a transição, a autenticação será preparada sem bloquear o protótipo:
-o frontend continua acessível até que `DATABASE_URL`, `AUTH_SECRET` e a migration
-de autenticação estejam configurados em cada ambiente.
-
-### Bloco 3 — Tema e sistema visual
-
-- Migrar o tema atual escuro para um tema claro, minimalista e orientado à operação.
-- Adotar tokens de cor, tipografia, espaçamento, foco e estados.
-- Introduzir componentes reutilizáveis no padrão shadcn/ui, Radix ou equivalente.
-- Revisar responsividade, acessibilidade, estados vazios, carregamento e erros.
-
-### Bloco 4 — Cadastro e provas
-
-- Implementar CRUD de arenas, provas e atletas.
-- Separar atleta cadastrado de atleta inscrito em uma prova.
-- Implementar status, busca, filtros e edição.
-- Criar a agenda do atleta e a visão administrativa da prova.
-
-### Bloco 5 — Sorteio persistente
-
-- Persistir configurações, versões e corridas geradas.
-- Validar as regras no servidor antes de publicar o sorteio.
-- Permitir reabertura e versionamento controlado.
-- Migrar o algoritmo existente para uma camada de domínio testável.
-
-### Bloco 6 — Operação de pista e resultados
-
-- Criar tela de corrida atual e próxima corrida.
-- Registrar tempos, NT, ausências e eliminações.
-- Criar modo locutor e modo público.
-- Publicar resultados e exportar súmulas.
-
-### Bloco 7 — Qualidade e produção
-
-- Testes unitários, integração e fluxo crítico.
-- Observabilidade, logs e tratamento de erros.
-- Backups, auditoria e políticas de retenção.
-- Validação de deploy, migrations e ambientes na Vercel.
-
-## Stack alvo
-
-- React + TypeScript + Vite no frontend atual.
-- Tailwind CSS para tokens e composição visual.
-- shadcn/ui/Radix ou componentes equivalentes para primitives acessíveis.
-- API TypeScript compatível com funções serverless da Vercel.
-- Prisma ORM.
-- PostgreSQL gerenciado compatível com Vercel.
-- Validação de entrada com Zod.
-- Autenticação baseada em sessão segura ou solução equivalente compatível com Vercel.
-- Auth.js Core e Prisma Adapter como base da integração de credenciais e sessão.
-
-## Estrutura atual
-
-```text
-src/
-  components/       Componentes do wizard e da súmula
-  data/             Seed inicial importado e dados de transição
-  types/            Tipos do domínio do sorteio
-  utils/            Algoritmo e cálculos
-  App.tsx           Orquestração atual em estado local
-  index.css         Tokens globais e impressão
-prisma/
-  schema.prisma     Modelo persistente alvo
-docs/
-  technical.md     Arquitetura e plano para desenvolvedores
-  user-manual.md   Manual operacional não técnico
+npm run db:generate
+npm run db:validate
+npm run db:migrate
+npm run db:deploy
+npm run db:seed
 ```
 
-## Rotas planejadas
+O build de produção é definido em [package.json](../package.json). A página
+principal é renderizada por [app/page.tsx](../app/page.tsx), que reutiliza o
+shell client-side de [src/App.tsx](../src/App.tsx). O layout e os metadados
+ficam em [app/layout.tsx](../app/layout.tsx).
 
-No shell atual, a navegação principal é feita por uma sidebar persistente no desktop,
-com drawer no mobile. A seleção ainda é controlada pelo estado do frontend e será
-substituída por rotas reais quando a autenticação e a API forem conectadas.
-
-| Menu da sidebar | Seção atual |
-| --- | --- |
-| Painel geral | `dashboard` |
-| Provas e arenas | `events` |
-| Cadastro de atletas | `athletes` |
-| Minha agenda | `agenda` |
-| Usuários | `users` |
-| Novo sorteio | `draw` |
-
-| Rota | Responsabilidade |
-| --- | --- |
-| `/login` | Autenticação |
-| `/` | Painel geral |
-| `/provas` | Lista e criação de provas |
-| `/provas/:eventId` | Detalhes e inscrições |
-| `/provas/:eventId/sorteio` | Configuração e sorteio |
-| `/provas/:eventId/pista` | Operação da pista |
-| `/provas/:eventId/resultado` | Resultado publicado |
-| `/atletas` | Cadastro global de atletas |
-| `/agenda` | Agenda por atleta e prova |
-| `/usuarios` | Administração de usuários |
-
-## Endpoints da API
-
-Os endpoints abaixo formam o contrato da API. Os endpoints de inscrições já estão
-implementados nos handlers serverless correspondentes; os demais permanecem como
-próximos módulos.
+## 3. Arquitetura de pastas
 
 ```text
-POST   /api/auth/login
-POST   /api/auth/logout
-GET    /api/auth/session
+app/
+  layout.tsx                 Layout global, metadata e CSS
+  page.tsx                   Entrada da aplicação
 
+pages/api/
+  [...path].ts               Gateway das APIs de domínio
+  auth/[...path].ts          Auth.js
+  auth/callback/[provider].ts
+
+src/
+  App.tsx                    Shell autenticado e navegação da aplicação
+  auth/session.ts            Cliente de login, sessão, logout e solicitação
+  components/                Telas e componentes de operação
+  server/
+    auth.ts                  Configuração Auth.js e leitura da sessão
+    next-auth-handler.ts     Adaptador Auth.js para Next Pages API
+    next-data-gateway.ts     Roteamento das APIs de domínio
+    permissions.ts           Regras de papéis e permissões
+    prisma.ts                Cliente Prisma
+    routes/                  Handlers de domínio
+  types/                     Tipos de eventos e sorteios
+  utils/drawAlgorithm.ts     Algoritmo de cruzamento
+  index.css                  Tokens visuais e estilos de impressão
+
+prisma/
+  schema.prisma              Modelo PostgreSQL
+  migrations/                Histórico de migrations
+  seed.ts                    Seed idempotente
+
+docs/
+  technical.md               Esta documentação
+  user-manual.md             Manual operacional
+```
+
+Os arquivos `api/`, `index.html` e `vite.config.ts` da arquitetura Vite/Vercel
+anterior foram removidos. O roteamento de API agora pertence ao Next.
+
+## 4. API no Next.js
+
+O Next expõe uma única rota catch-all para os endpoints de domínio:
+
+[`pages/api/[...path].ts`](../pages/api/[...path].ts) delega para
+[`src/server/next-data-gateway.ts`](../src/server/next-data-gateway.ts).
+O gateway transforma o caminho público em um handler de
+[`src/server/routes/`](../src/server/routes/) e preserva `req.body`, método,
+headers e parâmetros.
+
+Autenticação usa:
+
+- [`pages/api/auth/[...path].ts`](../pages/api/auth/[...path].ts);
+- [`pages/api/auth/callback/[provider].ts`](../pages/api/auth/callback/[provider].ts);
+- [`src/server/next-auth-handler.ts`](../src/server/next-auth-handler.ts);
+- [`src/server/auth.ts`](../src/server/auth.ts).
+
+Não há mais rewrites em `vercel.json`. Isso elimina a arquitetura anterior de
+várias funções independentes e deixa o Next controlar o empacotamento das APIs.
+
+### Endpoints implementados
+
+#### Autenticação e acesso
+
+```text
+GET    /api/auth/session
+GET    /api/auth/csrf
+POST   /api/auth/callback/credentials
+POST   /api/auth/signout
+
+POST   /api/access-requests
+GET    /api/access-requests
+PATCH  /api/access-requests
+```
+
+#### Atletas
+
+```text
+GET    /api/athletes
+POST   /api/athletes
+GET    /api/athletes/:id
+PATCH  /api/athletes/:id
+DELETE /api/athletes/:id
+```
+
+#### Arenas
+
+```text
+GET    /api/arenas
+POST   /api/arenas
+GET    /api/arenas/:id
+PATCH  /api/arenas/:id
+DELETE /api/arenas/:id
+```
+
+Exclusões de atletas e arenas são desativações lógicas quando aplicável.
+
+#### Provas
+
+```text
 GET    /api/events
 POST   /api/events
 GET    /api/events/:eventId
 PATCH  /api/events/:eventId
 DELETE /api/events/:eventId
+```
 
-GET    /api/athletes
-POST   /api/athletes
-GET    /api/athletes/:athleteId
-PATCH  /api/athletes/:athleteId
-DELETE /api/athletes/:athleteId
+#### Inscrições
 
+```text
 GET    /api/events/:eventId/registrations
 POST   /api/events/:eventId/registrations
 DELETE /api/events/:eventId/registrations/:registrationId
-
-POST   /api/events/:eventId/draws
-GET    /api/events/:eventId/draws
-GET    /api/events/:eventId/draws/:drawId
-POST   /api/events/:eventId/draws/:drawId/publish
-
-PATCH  /api/runs/:runId/times
-POST   /api/events/:eventId/results/publish
-GET    /api/events/:eventId/audit-logs
 ```
 
-## Persistência e segurança
+#### Sorteio e pista
 
-- Senhas nunca serão armazenadas em texto puro.
-- Dados de ambiente ficam apenas em `.env` local ou secrets da Vercel.
-- `.env.example` contém nomes de variáveis, nunca valores reais.
-- Alterações de resultado devem registrar usuário, data, valor anterior e novo valor.
-- Regras críticas serão revalidadas no backend.
-- Migrations Prisma serão executadas no pipeline de deploy de forma explícita.
+```text
+GET    /api/events/:eventId/draws
+POST   /api/events/:eventId/draws
+PATCH  /api/runs/:runId/times
+POST   /api/events/:eventId/results/publish
+```
 
-## Desenvolvimento local
+#### Usuários e relatórios
 
-1. Copiar `.env.example` para `.env`.
-2. No Vercel Postgres, usar a URL pooled para `DATABASE_URL` em runtime e a
-   `POSTGRES_URL_NON_POOLING` temporariamente para migrations, quando disponível.
-3. Executar `npm run db:deploy` em preview/produção ou `npx prisma migrate dev` em desenvolvimento.
-4. Executar `npm run dev`.
+```text
+GET    /api/users
+POST   /api/users
+GET    /api/users/:id
+PATCH  /api/users/:id
+DELETE /api/users/:id
 
-O frontend atual continua funcional sem banco durante a transição. O uso de dados mock será removido quando o fluxo persistente do Bloco 4 estiver concluído.
+GET    /api/reports/overview
+```
 
-### Vercel Postgres
+Todas as rotas protegidas verificam a sessão no servidor antes de consultar ou
+alterar o banco. Uma chamada sem sessão retorna `401`.
 
-- As variáveis do banco devem ser cadastradas nos ambientes Development, Preview e Production
-  da Vercel, sem entrar no repositório.
-- `DATABASE_URL` deve apontar para a conexão de runtime.
-- A migration inicial está em `prisma/migrations/20261111030000_init`.
-- O deploy deve executar `npm run db:deploy` antes de disponibilizar as funções autenticadas.
+## 5. Banco de dados e domínio
 
-## Registro de decisões
+O contrato persistente está em [prisma/schema.prisma](../prisma/schema.prisma).
+As migrations principais são:
 
-- O tema alvo é claro e minimalista, com fundo quase branco, azul-marinho, laranja de ação
-  e verde-petróleo para priorizar leitura, operação rápida e impressão.
-- O domínio será relacional porque provas, inscrições, atletas, corridas e resultados possuem relacionamentos e histórico.
-- O algoritmo existente será reaproveitado, mas a geração oficial deverá ser validada e persistida no servidor.
-- A documentação deve ser atualizada no mesmo bloco em que uma rota, entidade ou comportamento for alterado.
+- `20261111030000_init`: domínio inicial;
+- `20261113030000_add_access_requests`: solicitações públicas de acesso;
+- `20261113052510_add_user_roles_and_ownership`: papéis, validade, gestão e
+  propriedade dos dados.
 
-## Status de implementação
+Entidades principais:
 
-### Bloco 2 — tema claro e sistema visual (em andamento)
+- `User`: conta, papel, status, validade e gestor;
+- `AccessRequest`: solicitação pública pendente, aprovada ou recusada;
+- `Account`, `Session`, `VerificationToken`: suporte ao adapter do Auth.js;
+- `Athlete`: cadastro reutilizável de atleta;
+- `Arena`: local de realização;
+- `Event`: prova, data, status, arena e proprietário;
+- `EventRegistration`: vínculo atleta/prova;
+- `Draw`: versão e configuração do sorteio;
+- `Run`: dupla, bateria, rodada e status da corrida;
+- `RunTime`: tempo por boi;
+- `AuditLog`: histórico de ações do domínio.
 
-- Tokens de superfície, texto, borda e marca adicionados em `src/index.css`.
-- Paleta refinada para marfim, azul-petróleo e âmbar queimado, substituindo o cinza frio nos elementos de contexto.
-- Compatibilidade visual temporária criada para as classes escuras do protótipo.
-- Primitive `Button` criada em `src/components/ui/Button.tsx`.
-- Modal de novo competidor já utiliza a primitive de botão.
-- Dashboard inicial criado em `src/components/Dashboard.tsx`, com estado vazio explícito e sem provas fictícias.
-- Ações de demonstração e chips de busca de teste removidos da operação.
-- Sidebar criada em `src/components/Sidebar.tsx`, integrada ao shell principal com estado ativo e drawer mobile.
-- Estados vazios de seções ainda não persistidas centralizados em `src/components/SectionPlaceholder.tsx`.
-- Cadastro de atletas ganhou uma tela operacional em `src/components/AthletesPage.tsx`,
-  com busca, contagem, inclusão pelo modal existente e remoção local durante a transição.
-- Cadastro inicial importado do sistema de referência em `src/data/referenceAthletes.ts`;
-  os registros mantêm número de inscrição, nome, cidade e handicaps de cabeça/pé quando disponíveis.
-- Tela de provas e arenas criada em `src/components/EventsPage.tsx`, com seis eventos
-  iniciais importados para orientar a futura persistência.
-- Tela de detalhes criada em `src/components/EventDetailsPage.tsx`, ligada aos cartões
-  da lista e preparada para inscrições, sorteio, locução e resultado.
-- Tela de inscrições criada em `src/components/RegistrationPage.tsx`, com seleção de
-  atleta, função de cabeceiro/pezeiro, contadores, remoção e estado local de transição.
-- O fluxo de inscrições é aberto a partir dos detalhes da prova e usa a coleção
-  `EventRegistration` do Prisma. A tela usa a API quando há sessão e banco disponíveis;
-  em ambientes sem essa infraestrutura, deixa explícito que os dados são locais.
-- A aplicação passou a consultar `GET /api/athletes` e `GET /api/events` na inicialização.
-  Quando a API responde com dados válidos, os cadastros persistidos substituem os seeds;
-  quando o ambiente ainda não possui sessão ou banco, os dados de referência permanecem
-  disponíveis como fallback identificado.
-- O endpoint `GET /api/events` expõe provas, arena, responsável e contagens para alimentar
-  a lista operacional.
-- CRUD de provas iniciado: `POST /api/events`, `PATCH /api/events/:eventId` e
-  `DELETE /api/events/:eventId`. A exclusão é cancelamento lógico para preservar inscrições,
-  sorteios e histórico.
-- O formulário de prova em `src/components/EventsPage.tsx` cria arena e prova no mesmo
-  fluxo, permite editar nome/data e usa fallback local quando a API não está disponível.
-- CRUD de arenas adicionado em `api/arenas/index.ts` e `api/arenas/[id].ts`, com
-  listagem, criação idempotente, edição e desativação lógica.
-- O cadastro de provas consulta arenas ativas e permite reutilizar uma arena existente
-  ou criar uma nova, evitando duplicações por nome, cidade e UF.
-- Seed idempotente criado em `prisma/seed.ts`, com usuário administrador, 66 atletas,
-  arenas derivadas e seis provas de referência. A senha do usuário seed nunca fica no
-  código: deve ser fornecida por `SEED_ADMIN_PASSWORD`.
-- Cliente Auth.js corrigido para usar `/api/auth/csrf`, `/api/auth/callback/credentials`
-  e `/api/auth/signout`, mantendo cookies e proteção CSRF no fluxo real de login.
-- Prisma usa `DATABASE_URL_POOLED` para runtime e `DATABASE_URL` para migrations.
-  As credenciais nunca devem ser commitadas, documentadas ou enviadas em mensagens.
-- Prisma usa `DATABASE_URL` para runtime pooled e `DIRECT_URL` para migrations. As
-  credenciais nunca devem ser commitadas, documentadas ou enviadas em mensagens.
-- Próximo passo: migrar as listas, configuração e súmula para classes semânticas e remover a camada de compatibilidade.
+O Prisma usa `DATABASE_URL_POOLED` no runtime e `DATABASE_URL` como conexão
+direta para migrations. Variáveis e credenciais não devem ser commitadas.
 
-### Bloco 2 — identidade e acesso (fundação iniciada)
+## 6. Autenticação e sessão
 
-- Dependências `@auth/core`, `@auth/prisma-adapter` e `zod` adicionadas.
-- Modelos `Account`, `Session` e `VerificationToken` adicionados ao schema Prisma.
-- `User` preparado para os campos esperados pelo adapter e para autenticação por credenciais.
-- Cliente de sessão criado em `src/auth/session.ts`, usando cookies incluídos nas requisições.
-- Próximo passo: criar o handler serverless do Auth.js, login visual e proteção gradual das operações.
+O login usa Auth.js Credentials Provider:
+
+1. o cliente solicita CSRF;
+2. envia e-mail e senha para o callback Credentials;
+3. o servidor busca o usuário por e-mail;
+4. `bcryptjs` compara a senha com `passwordHash`;
+5. usuários inativos ou expirados são recusados;
+6. o Auth.js cria sessão JWT em cookie;
+7. `/api/auth/session` restaura a sessão após reload.
+
+O logout chama `/api/auth/signout`, remove a sessão e retorna à tela de login.
+Senhas nunca são armazenadas em texto puro.
+
+## 7. Papéis, permissões e propriedade
+
+Papéis de negócio:
+
+| Papel | Permissões |
+| --- | --- |
+| `ADMIN` | Acesso completo, incluindo gerenciamento de usuários |
+| `MANAGER` | Acesso operacional completo; pode habilitar/bloquear provisórios, mas não cria, edita ou exclui usuários |
+| `USER` | Acessa e mantém seus próprios atletas, arenas, provas, inscrições e histórico |
+
+O schema mantém papéis legados para compatibilidade (`ORGANIZER`,
+`TRACK_OPERATOR`, `ANNOUNCER`, `JUDGE`, `ATHLETE`, `VIEWER`), mas as telas
+principais usam `ADMIN`, `MANAGER` e `USER`.
+
+Ownership:
+
+- `Athlete.ownerId`;
+- `Arena.ownerId`;
+- `Event.createdById`.
+
+Admin e Manager podem consultar todos os proprietários, criar cadastros em nome
+de um proprietário e filtrar os dados. User recebe somente o próprio escopo.
+As verificações são feitas no servidor, inclusive em inscrições, sorteios,
+tempos e resultados.
+
+## 8. Solicitação e habilitação de acesso
+
+O formulário público da tela de login recebe:
+
+- nome;
+- telefone;
+- e-mail;
+- token do Google reCAPTCHA.
+
+O servidor valida o reCAPTCHA usando `RECAPTCHA_SECRET_KEY`, recusa solicitações
+pendentes duplicadas e cria `AccessRequest`.
+
+Admin ou Manager podem:
+
+1. visualizar a fila;
+2. aprovar definindo uma senha inicial;
+3. criar o usuário provisório inativo;
+4. habilitar o acesso;
+5. bloquear posteriormente;
+6. recusar a solicitação.
+
+Variáveis necessárias:
+
+```env
+AUTH_SECRET=...
+DATABASE_URL=...
+DATABASE_URL_POOLED=...
+VITE_RECAPTCHA_SITE_KEY=...
+RECAPTCHA_SECRET_KEY=...
+```
+
+## 9. Fluxos operacionais implementados
+
+### Provas e inscrições
+
+O cadastro permite criar ou reutilizar uma arena, criar/editar uma prova,
+consultar proprietário, status, inscrições e corridas. Inscrições são
+persistidas por prova e podem ser canceladas sem apagar o atleta global.
+
+### Sorteio
+
+O servidor consulta inscrições ativas, executa o algoritmo de cruzamento,
+cria nova versão de `Draw` e grava cada dupla como `Run`. A versão mais recente
+é recuperada após reload.
+
+### Pista e locução
+
+O operador registra tempos por corrida e por boi. O servidor faz upsert em
+`RunTime`, recalcula total/média e atualiza o status da corrida. A tela do
+locutor apresenta a fila persistida e o progresso da prova.
+
+### Resultados
+
+Resultados ordenam as duplas pela média final, separam NTs e pendências e só
+podem ser publicados quando não há corridas pendentes. Publicar marca o sorteio
+como `PUBLISHED` e a prova como `FINISHED`.
+
+### Relatórios e impressão
+
+`/api/reports/overview` agrega provas, atletas, arenas, sorteios e corridas,
+com filtros por proprietário, status e intervalo de datas. Relatórios e
+resultados possuem impressão A4 via `window.print()` e CSS específico, sem
+dependência de biblioteca de PDF.
+
+## 10. Interface e navegação
+
+A aplicação usa tema claro e minimalista, com tokens em
+[src/index.css](../src/index.css), sidebar responsiva, drawer mobile, estados
+de carregamento, vazios e erros.
+
+Seções:
+
+- Painel geral;
+- Provas e arenas;
+- Cadastro de atletas;
+- Minha agenda;
+- Usuários;
+- Relatórios;
+- Novo sorteio;
+- detalhes da prova, inscrições, pista, locução e resultado.
+
+A navegação atual é orquestrada pelo shell React. As APIs e o banco são reais;
+a evolução futura pode transformar cada seção em uma rota App Router dedicada
+sem alterar o contrato de domínio.
+
+## 11. Seed e produção
+
+[prisma/seed.ts](../prisma/seed.ts) é idempotente e pode criar/atualizar:
+
+- usuário administrador;
+- atletas de referência;
+- arenas;
+- seis provas iniciais.
+
+O e-mail e a senha do seed vêm de `SEED_ADMIN_EMAIL` e
+`SEED_ADMIN_PASSWORD`. A senha não fica no código.
+
+Antes do deploy:
+
+1. configurar variáveis na Vercel;
+2. executar migrations;
+3. executar o build;
+4. validar login, sessão, logout e APIs protegidas;
+5. confirmar a publicação pública.
+
+## 12. Estado atual e pendências
+
+Implementado:
+
+- autenticação real com sessão persistente;
+- logout;
+- papéis e permissões;
+- ownership e filtros administrativos;
+- solicitação de acesso com aprovação;
+- CRUD de atletas, arenas, provas e usuários;
+- inscrições persistentes;
+- sorteio persistente;
+- tempos, locução e resultados;
+- relatórios e impressão;
+- tema claro;
+- migração de Vite para Next.js;
+- build Next validado;
+- APIs protegidas com `401` sem sessão.
+
+Pendências de operação:
+
+- configurar e testar as chaves reais do reCAPTCHA na Vercel;
+- criar contas reais separadas para validar Manager e User em produção;
+- executar homologação completa de criação, sorteio, tempos e publicação em
+  ambiente produtivo;
+- adicionar rate limiting e observabilidade para uso público;
+- revisar avisos de lint existentes;
+- considerar rotas App Router individuais para cada seção visual.

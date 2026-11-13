@@ -15,6 +15,13 @@ interface LoginInput {
   password: string;
 }
 
+interface AccessRequestInput {
+  name: string;
+  phone: string;
+  email: string;
+  recaptchaToken: string;
+}
+
 const request = async <T>(input: RequestInfo, init?: RequestInit): Promise<T> => {
   const response = await fetch(input, {
     credentials: 'include',
@@ -55,11 +62,11 @@ export const authClient = {
     const response = await fetch('/api/auth/callback/credentials', {
       method: 'POST',
       credentials: 'include',
-      redirect: 'manual',
+      redirect: 'follow',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
     });
-    if (response.status !== 302 && response.status !== 303 && response.ok === false) {
+    if (!response.ok) {
       throw new Error('E-mail ou senha inválidos.');
     }
     const session = await authClient.getSession();
@@ -72,13 +79,18 @@ export const authClient = {
     const response = await fetch('/api/auth/signout', {
       method: 'POST',
       credentials: 'include',
-      redirect: 'manual',
+      redirect: 'follow',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ csrfToken, callbackUrl: window.location.origin }),
     });
-    if (response.status !== 302 && response.status !== 303 && !response.ok) {
+    if (!response.ok) {
       throw new Error('Não foi possível encerrar a sessão.');
     }
     return { success: true as const };
   },
+
+  requestAccess: (input: AccessRequestInput) => request('/api/access-requests', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }),
 };

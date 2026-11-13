@@ -3,21 +3,22 @@ import {
   CalendarDays,
   ClipboardList,
   LayoutDashboard,
-  LogIn,
+  LogOut,
   Menu,
   Users,
   UserRoundCog,
+  BarChart3,
   X,
 } from 'lucide-react';
 
-export type AppSection = 'dashboard' | 'draw' | 'events' | 'athletes' | 'agenda' | 'users';
+export type AppSection = 'dashboard' | 'draw' | 'events' | 'athletes' | 'agenda' | 'users' | 'reports';
 
 interface SidebarProps {
   activeSection: AppSection;
   isOpen: boolean;
   onNavigate: (section: AppSection) => void;
   onClose: () => void;
-  onOpenLogin: () => void;
+  onLogout: () => void;
 }
 
 const menuItems: Array<{ id: AppSection; label: string; icon: React.ElementType }> = [
@@ -26,6 +27,7 @@ const menuItems: Array<{ id: AppSection; label: string; icon: React.ElementType 
   { id: 'athletes', label: 'Cadastro de atletas', icon: Users },
   { id: 'agenda', label: 'Minha agenda', icon: CalendarDays },
   { id: 'users', label: 'Usuários', icon: UserRoundCog },
+  { id: 'reports', label: 'Relatórios', icon: BarChart3 },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -33,7 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpen,
   onNavigate,
   onClose,
-  onOpenLogin,
+  onLogout,
 }) => (
   <>
     {isOpen && (
@@ -46,7 +48,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     )}
 
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-[#dfe6ed] bg-[#ffffff] shadow-xl transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 lg:shadow-none ${
+      data-print-hidden
+      className={`no-print fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-[#dfe6ed] bg-[#ffffff] shadow-xl transition-transform duration-200 lg:static lg:z-auto lg:translate-x-0 lg:shadow-none ${
         isOpen ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
@@ -67,6 +70,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className="rounded-lg p-2 text-[#6b788b] transition hover:bg-[#eef3f6] hover:text-[#172036] lg:hidden"
         >
           <X className="h-5 w-5" />
+        </button>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[#6b788b] transition hover:bg-red-50 hover:text-red-700"
+        >
+          <LogOut className="h-4 w-4" />
+          Sair da conta
         </button>
       </div>
 
@@ -119,14 +130,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       <div className="border-t border-[#dfe6ed] p-4">
-        <button
-          type="button"
-          onClick={onOpenLogin}
-          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[#6b788b] transition hover:bg-[#eef3f6] hover:text-[#172036]"
-        >
-          <LogIn className="h-4 w-4" />
-          Acessar conta
-        </button>
+
         <div className="mt-4 rounded-xl bg-[#eef3f6] px-3 py-3">
           <p className="text-xs font-bold text-[#2f3b4f]">Henrique Lagoa</p>
           <p className="mt-1 text-[11px] text-[#6b788b]">Administrador da arena</p>

@@ -11,4 +11,6 @@ export interface EventSummary {
   fixedPairs?: number;
   runs: number;
   steward?: string;
+  ownerId?: string;
+  ownerName?: string;
 }

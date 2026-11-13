@@ -1,190 +1,275 @@
 # Sorteios Lagoa — manual do usuário
 
-## Objetivo do sistema
+## 1. Para que serve
 
-O sistema organiza provas de laço em dupla. Ele permite cadastrar atletas, criar uma prova, realizar inscrições, gerar a ordem de corrida, registrar os tempos e publicar os resultados.
+O Sorteios Lagoa organiza provas de laço em dupla do cadastro ao resultado:
 
-## Como o sistema será organizado
+1. cadastrar atletas e arenas;
+2. criar uma prova;
+3. inscrever atletas;
+4. gerar o sorteio;
+5. operar a pista;
+6. registrar tempos;
+7. publicar e imprimir resultados;
+8. consultar relatórios e histórico.
 
-### Acesso da equipe
+O sistema utiliza dados reais salvos no banco. Não é necessário recadastrar
+atletas, arenas ou provas a cada acesso.
 
-O botão **Acessar conta**, no menu lateral, abre a tela de login. Informe o e-mail
-e a senha cadastrados para acessar a operação. O botão de visualização da senha
-permite conferir o texto digitado antes do envio.
+## 2. Entrar no sistema
 
-Durante a transição, o login já está disponível visualmente, mas o sistema mantém
-o protótipo acessível até que o banco de dados e a sessão do servidor sejam
-configurados no ambiente.
+Na tela inicial informe:
 
-### Menu lateral
+- e-mail;
+- senha.
 
-O menu lateral fica sempre disponível no computador e organiza o sistema por área:
+Clique em **Entrar**. A sessão permanece ativa ao atualizar a página. Para
+encerrar, use **Sair** no cabeçalho ou **Sair da conta** no menu lateral.
 
-- **Painel geral:** visão resumida da operação e próximos passos.
-- **Provas e arenas:** criação e acompanhamento dos eventos.
-- **Cadastro de atletas:** manutenção do cadastro reutilizável de participantes.
-- **Minha agenda:** consulta das provas relacionadas ao usuário.
-- **Usuários:** administração dos acessos da equipe.
-- **Novo sorteio:** abertura direta do fluxo para montar as duplas.
+Usuários inativos ou com acesso expirado não conseguem entrar.
 
-No celular, o mesmo menu é aberto pelo botão de menu no topo. As áreas que ainda
-não foram conectadas ao banco exibem uma mensagem explicando o que será habilitado,
-sem apresentar informações fictícias.
+## 3. Solicitar acesso
 
-### Painel geral
+Se ainda não possui uma conta:
 
-O painel apresenta um resumo das provas e dos atletas. A partir dele, o usuário poderá abrir uma prova existente, criar uma nova prova ou consultar a agenda.
+1. clique em **Ainda não tenho acesso**;
+2. informe nome;
+3. informe telefone;
+4. informe e-mail;
+5. complete o reCAPTCHA;
+6. envie a solicitação.
 
-### Provas
+A solicitação não libera o sistema automaticamente. Um Admin ou Manager precisa
+analisá-la, definir uma senha inicial e habilitar o usuário.
 
-Uma prova reúne todas as informações de um evento:
+Se o reCAPTCHA não aparecer, o administrador precisa configurar as chaves do
+Google no ambiente de produção.
 
-- Nome da prova.
-- Data.
-- Arena ou local.
-- Cidade.
-- Situação das inscrições.
-- Situação do sorteio.
-- Situação da apuração.
+## 4. Menu principal
 
-As provas poderão estar em rascunho, abertas para inscrição, sorteadas, em andamento, finalizadas ou canceladas.
+- **Painel geral:** visão resumida das provas, atletas e operação.
+- **Provas e arenas:** criação, edição, inscrições e acompanhamento das provas.
+- **Cadastro de atletas:** cadastro reutilizável dos participantes.
+- **Minha agenda:** próximas provas e participações.
+- **Usuários:** usuários, solicitações e habilitações, conforme permissão.
+- **Relatórios:** totais, filtros e impressão.
+- **Novo sorteio:** acesso rápido ao fluxo de sorteio.
 
-O menu **Provas e arenas** apresenta as provas importadas do cadastro de referência,
-com data, formato, arena, status, quantidade de inscritos e corridas. Os atalhos
-de inscrições e sorteio já estão posicionados para receber as rotas persistentes.
+Em telas menores, abra o menu pelo botão no topo.
 
-Clique em **Detalhes** ou **Inscrições** para abrir o resumo completo da prova.
-Nessa tela ficam reunidas as informações do evento, os números principais e os
-acessos para inscrições, sorteio e pista, locução e resultado final.
+## 5. Usuários e permissões
 
-Para criar uma prova, clique em **Nova prova / arena** e informe nome, data, arena,
-cidade e UF. O cadastro da arena é feito junto com a prova quando o banco está
-conectado. O botão de edição permite alterar nome e data; o botão de exclusão
-cancela a prova sem apagar seu histórico.
+### Admin
 
-Se já existir uma arena cadastrada, selecione-a no campo **Arena**. Para cadastrar
-uma nova, escolha **Cadastrar nova arena** e preencha nome, cidade e UF. Arenas
-inativas não aparecem para novas provas.
+Pode:
 
-Na primeira implantação, a equipe técnica pode carregar os dados iniciais com o seed
-do banco. Esse processo cria o usuário administrador, os atletas importados e as
-provas de referência sem duplicar registros quando executado novamente.
+- acessar todas as áreas;
+- criar, editar, habilitar e bloquear usuários;
+- aprovar ou recusar solicitações;
+- consultar dados de todos os proprietários;
+- criar cadastros para qualquer usuário.
 
-Depois que o seed for executado, entre com o e-mail configurado em `SEED_ADMIN_EMAIL`
-e a senha definida em `SEED_ADMIN_PASSWORD`. O login real depende de `AUTH_SECRET`,
-`DATABASE_URL` e das migrations aplicadas no ambiente.
+### Manager
 
-### Atletas
+Pode:
 
-O cadastro de atletas guarda os dados que podem ser reutilizados em várias provas. O cadastro não significa que o atleta está inscrito em uma prova específica.
+- operar provas, atletas, arenas, inscrições, sorteios e resultados;
+- consultar dados de todos os proprietários;
+- aprovar ou recusar solicitações;
+- habilitar ou bloquear usuários provisórios.
 
-Na tela de cadastro, use a busca para localizar um atleta pelo nome ou cidade. O botão
-**Novo atleta** abre o formulário de inclusão, e o ícone de lixeira remove um cadastro
-da lista local durante a fase de transição. A persistência definitiva será ativada
-quando a API estiver conectada ao PostgreSQL.
+Não pode criar, editar ou excluir usuários. O Admin permanece visível para o
+Manager, mas sem ações administrativas indevidas.
 
-O cadastro inicial foi preenchido com os atletas existentes no sistema de referência,
-incluindo número de inscrição, cidade e os handicaps de cabeça e pé informados.
+### User
 
-Quando o usuário estiver autenticado e o banco estiver conectado, a tela carregará os
-atletas persistidos pela API. Sem essa conexão, os dados de referência continuam
-visíveis para permitir a navegação e os testes do fluxo.
+Pode consultar e manter somente seus próprios:
 
-Cada atleta poderá ter:
+- atletas;
+- arenas;
+- provas;
+- inscrições;
+- sorteios;
+- tempos;
+- resultados;
+- histórico.
 
-- Nome.
-- Apelido.
-- Telefone.
-- Cidade e estado.
-- Handicap de cabeça.
-- Handicap de pé.
-- Situação ativo ou inativo.
+## 6. Cadastrar atletas
 
-### Inscrições
+1. Abra **Cadastro de atletas**.
+2. Clique em **Novo atleta**.
+3. Preencha nome, cidade, estado e handicaps.
+4. Se disponível, informe telefone, e-mail, apelido e número de inscrição.
+5. Selecione o proprietário quando a permissão permitir.
+6. Salve.
 
-Depois de criar uma prova, o organizador escolhe quais atletas participarão dela. A inscrição pertence à prova e pode ser cancelada sem apagar o cadastro global do atleta.
+O atleta fica disponível para futuras provas. Excluir um cadastro não deve ser
+usado para retirar um atleta de uma prova: nesse caso, cancele a inscrição.
 
-Para inscrever:
+Use a busca para localizar por nome ou cidade. Admin e Manager podem filtrar
+por proprietário.
 
-1. Abra **Provas e arenas** e entre nos detalhes da prova.
-2. Clique em **Inscrições**.
-3. Selecione o atleta no campo de busca.
-4. Escolha a função **Cabeceiro** ou **Pezeiro**.
-5. Clique em **Adicionar**.
+## 7. Cadastrar arenas
 
-As duas listas mostram os atletas já incluídos e o contador de cada função. Use o
-ícone de lixeira para remover uma inscrição sem excluir o atleta do cadastro geral.
-Durante a fase atual de transição, as alterações ficam na tela e ainda não são
-persistidas no banco; a integração com PostgreSQL será ativada junto dos endpoints
-de inscrições.
+Ao criar uma prova, escolha uma arena existente ou cadastre uma nova informando:
 
-Com a API e o banco disponíveis, a inclusão e o cancelamento passam a ser persistidos
-automaticamente. A inscrição cancelada não apaga o atleta do cadastro global e pode
-ser reativada em uma nova inclusão.
+- nome;
+- cidade;
+- UF;
+- endereço, quando aplicável.
 
-### Sorteio
+Arenas inativas não aparecem para novas provas, mas permanecem no histórico.
 
-O sorteio combina cabeceiros e pezeiros conforme as regras configuradas pelo organizador. Antes de gerar, confira:
+## 8. Criar e editar provas
 
-- Atletas selecionados.
-- Grupos ou chaves.
-- Quantidade de baterias.
-- Intervalo mínimo de descanso.
-- Opção de balanceamento por handicap.
+1. Abra **Provas e arenas**.
+2. Clique em **Nova prova / arena**.
+3. Informe nome e data.
+4. Selecione uma arena ou cadastre uma nova.
+5. Defina o proprietário, quando tiver permissão.
+6. Salve.
 
-Depois de gerado, o sorteio deve ser conferido antes de ser publicado para a pista.
+O botão de edição permite alterar dados da prova. A exclusão é tratada como
+cancelamento lógico para preservar inscrições, sorteios e histórico.
 
-### Operação da pista
+Cada prova exibe seu status, arena, proprietário, inscritos e corridas.
 
-Na operação, a equipe acompanha a ordem das corridas. Para cada corrida, registra os tempos dos bois e indica quando houver NT, ausência ou eliminação.
+## 9. Fazer inscrições
 
-O resultado só deve ser publicado depois da conferência dos tempos e das médias.
+1. Abra uma prova.
+2. Entre em **Inscrições**.
+3. Busque o atleta.
+4. Adicione-o à prova.
+5. Escolha a função de cabeceiro ou pezeiro quando o fluxo solicitar.
+6. Remova a inscrição pela própria lista quando necessário.
 
-### Agenda
+A inscrição pertence à prova. Cancelá-la não remove o cadastro global do atleta.
+Somente inscrições ativas participam do sorteio.
 
-A agenda ajuda a encontrar provas abertas e consultar a participação do atleta. Ela será usada para localizar data, arena, inscrição e ordem de corrida.
+## 10. Gerar o sorteio
 
-## Fluxo recomendado para uma prova
+1. Abra os detalhes da prova.
+2. Clique em **Sorteio e pista** ou **Novo sorteio**.
+3. Confira cabeceiros, pezeiros, grupos e configuração.
+4. Gere o sorteio.
+5. Revise as duplas, baterias e rodadas.
+6. Gere uma nova versão se precisar refazer.
 
-1. Cadastre os atletas que ainda não existem.
-2. Crie a prova e informe data e arena.
-3. Abra as inscrições.
-4. Inscreva os atletas participantes.
-5. Encerre as inscrições.
-6. Configure e gere o sorteio.
-7. Confira a ordem de corrida.
-8. Inicie a operação da pista.
-9. Registre tempos e ocorrências.
-10. Confira a classificação.
-11. Publique o resultado.
+Cada geração fica salva no banco como uma versão. Ao recarregar a tela, o
+último sorteio persistido é recuperado.
 
-## Estados e cuidados
+## 11. Operar a pista e lançar tempos
 
-- **Rascunho:** a prova ainda está sendo configurada.
-- **Aberta para inscrições:** atletas podem ser adicionados ou removidos.
-- **Sorteada:** a ordem foi gerada e deve ser conferida.
-- **Em andamento:** a pista está registrando corridas.
-- **Finalizada:** o resultado está encerrado.
-- **Cancelada:** a prova não será realizada.
+Na tabela de corridas:
 
-Antes de excluir ou cancelar qualquer informação, confirme se ela não será necessária para o histórico da prova.
+1. selecione a corrida;
+2. informe o tempo de cada boi;
+3. marque **NT** quando a corrida não tiver tempo válido;
+4. revise total, média e status;
+5. avance para a próxima corrida.
 
-## Tema e usabilidade
+Os tempos são salvos no banco. Se a página for recarregada, os dados continuam
+disponíveis.
 
-O sistema será migrado para um tema claro e minimalista. A intenção é facilitar:
+## 12. Tela do locutor
 
-- Leitura em ambientes externos e arenas.
-- Uso em notebooks e tablets.
-- Identificação rápida de ações.
-- Visualização de tabelas e tempos.
-- Impressão de súmulas.
+Abra a tela de locução a partir dos detalhes da prova. Ela mostra:
 
-Botões, mensagens, estados de carregamento e erros serão padronizados para que cada ação tenha uma resposta clara.
+- corrida atual;
+- próxima corrida;
+- nomes da dupla;
+- bateria e rodada;
+- progresso da prova.
 
-## Atualização visual em andamento
+A tela depende de um sorteio salvo e acompanha a fila persistida.
 
-O primeiro passo da mudança para o tema claro já foi aplicado na base da aplicação. Os componentes estão sendo migrados gradualmente para controles padronizados, começando pelos botões do cadastro de competidor.
+## 13. Publicar resultados
 
-A paleta utiliza fundo marfim, texto azul-esverdeado escuro, azul-petróleo para ações estruturais e âmbar queimado para destaques. O contador de inscritos usa o azul-petróleo para indicar informação operacional sem competir com os botões principais.
+1. Abra **Resultado final**.
+2. Confira médias, tempos, NTs e pendências.
+3. Corrija ou complete as corridas pendentes.
+4. Publique o resultado.
 
-O painel inicial agora apresenta apenas os dados disponíveis no sistema. Enquanto o banco de dados não estiver conectado, a área de provas recentes exibirá um estado vazio orientando a criação da primeira prova, sem exemplos ou números fictícios.
+O sistema impede a publicação enquanto houver corridas pendentes. Depois da
+publicação, o sorteio fica publicado e a prova passa para **Finalizada**.
+
+## 14. Relatórios e PDF
+
+Abra **Relatórios** para consultar:
+
+- total de provas;
+- total de atletas;
+- total de arenas;
+- total de sorteios;
+- total de corridas.
+
+Use os filtros de:
+
+- proprietário;
+- status;
+- data inicial;
+- data final.
+
+Clique em **Imprimir / salvar PDF** e escolha **Salvar como PDF** na janela do
+navegador. A impressão usa formato A4 e oculta os controles de navegação.
+
+Resultados de provas também possuem impressão própria.
+
+## 15. Agenda e painel
+
+O **Painel geral** exibe os dados operacionais mais importantes e atalhos para
+as provas. A **Minha agenda** organiza provas por data, arena, inscrições e
+proprietário.
+
+Admin e Manager conseguem consultar todos os proprietários e filtrar uma conta
+específica. User visualiza apenas seu próprio contexto.
+
+## 16. Fluxo recomendado
+
+1. Cadastre ou localize os atletas.
+2. Cadastre ou reutilize a arena.
+3. Crie a prova.
+4. Confira o proprietário.
+5. Faça as inscrições.
+6. Gere e revise o sorteio.
+7. Opere a pista.
+8. Lance tempos e NTs.
+9. Confira a classificação.
+10. Publique o resultado.
+11. Imprima ou consulte o relatório.
+
+## 17. Status mais comuns
+
+- **Rascunho:** prova em configuração.
+- **Aberta:** recebendo inscrições.
+- **Sorteada:** sorteio gerado.
+- **Em andamento:** corridas sendo realizadas.
+- **Finalizada:** resultado publicado.
+- **Cancelada:** prova encerrada sem realização.
+
+Corridas podem estar pendentes, em andamento, concluídas, ausentes ou
+eliminadas.
+
+## 18. Segurança e boas práticas
+
+- não compartilhe sua senha;
+- encerre a sessão em computadores compartilhados;
+- confirme o proprietário antes de salvar um cadastro;
+- não exclua dados históricos sem verificar a necessidade;
+- use cancelamento de inscrição para retirar um atleta de uma prova;
+- revise tempos antes de publicar;
+- Admin e Manager devem habilitar somente solicitações verificadas.
+
+O sistema não armazena senhas em texto puro. A sessão é protegida por cookie
+de autenticação e as APIs verificam a permissão no servidor.
+
+## 19. Situações que exigem administrador
+
+Procure o administrador quando:
+
+- o reCAPTCHA não carregar;
+- o usuário estiver inativo ou expirado;
+- for necessário trocar o proprietário de muitos registros;
+- houver erro de conexão com o banco;
+- uma prova precisar ser reaberta após publicação;
+- for necessário configurar variáveis da Vercel.

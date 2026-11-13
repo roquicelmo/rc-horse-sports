@@ -6,9 +6,12 @@ interface EventDetailsPageProps {
   event: EventSummary;
   onBack: () => void;
   onOpenRegistrations: () => void;
+  onOpenDraw: () => void;
+  onOpenAnnouncer: () => void;
+  onOpenResults: () => void;
 }
 
-export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({ event, onBack, onOpenRegistrations }) => (
+export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({ event, onBack, onOpenRegistrations, onOpenDraw, onOpenAnnouncer, onOpenResults }) => (
   <section className="space-y-5">
     <button
       type="button"
@@ -59,13 +62,13 @@ export const EventDetailsPage: React.FC<EventDetailsPageProps> = ({ event, onBac
       <button type="button" onClick={onOpenRegistrations} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#eef3f6] px-4 py-3 text-sm font-bold text-[#172036] transition hover:bg-[#e3eaf0]">
         <ClipboardList className="h-4 w-4" /> Inscrições
       </button>
-      <button type="button" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#218f83] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#176f67]">
+      <button type="button" onClick={onOpenDraw} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#218f83] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#176f67]">
         <Trophy className="h-4 w-4" /> Sorteio e pista
       </button>
-      <button type="button" className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#e87900] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#cf6900]">
+      <button type="button" onClick={onOpenAnnouncer} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#e87900] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#cf6900]">
         <Mic2 className="h-4 w-4" /> Tela do locutor
       </button>
-      <button type="button" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe6ed] bg-white px-4 py-3 text-sm font-bold text-[#2f3b4f] transition hover:bg-[#eef3f6]">
+      <button type="button" onClick={onOpenResults} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe6ed] bg-white px-4 py-3 text-sm font-bold text-[#2f3b4f] transition hover:bg-[#eef3f6]">
         <FileText className="h-4 w-4" /> Resultado final
       </button>
     </div>

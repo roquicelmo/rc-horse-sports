@@ -7,16 +7,23 @@ interface NewCompetitorModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (competitor: Competitor) => void;
+  owners?: Array<{ id: string; name: string | null; email: string }>;
+  defaultOwnerId?: string;
+  canAssignOwner?: boolean;
 }
 
 export const NewCompetitorModal: React.FC<NewCompetitorModalProps> = ({
   isOpen,
   onClose,
   onAdd,
+  owners = [],
+  defaultOwnerId,
+  canAssignOwner = false,
 }) => {
   const [nome, setNome] = useState('');
   const [handicap, setHandicap] = useState(2.5);
   const [cidade, setCidade] = useState('');
+  const [ownerId, setOwnerId] = useState(defaultOwnerId ?? '');
 
   if (!isOpen) return null;
 
@@ -29,12 +36,15 @@ export const NewCompetitorModal: React.FC<NewCompetitorModalProps> = ({
       nome: nome.trim(),
       handicap,
       cidade: cidade.trim() || undefined,
+      ownerId: ownerId || defaultOwnerId,
+      ownerName: owners.find((owner) => owner.id === ownerId)?.name ?? undefined,
     };
 
     onAdd(newComp);
     setNome('');
     setHandicap(2.5);
     setCidade('');
+    setOwnerId(defaultOwnerId ?? '');
     onClose();
   };
 
@@ -74,6 +84,7 @@ export const NewCompetitorModal: React.FC<NewCompetitorModalProps> = ({
               className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500"
             />
           </div>
+          {canAssignOwner && <div><label className="text-xs font-semibold text-slate-300 block mb-1">Proprietário do cadastro</label><select value={ownerId} onChange={(event) => setOwnerId(event.target.value)} className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white text-sm focus:outline-none focus:border-amber-500"><option value="">Selecione o proprietário</option>{owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.name ?? owner.email}</option>)}</select></div>}
 
           <div>
             <label className="text-xs font-semibold text-slate-300 block mb-1">

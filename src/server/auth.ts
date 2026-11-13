@@ -19,9 +19,10 @@ export const authConfig: AuthConfig = {
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user?.active || !user.passwordHash) return null;
+        if (user.accessExpiresAt && user.accessExpiresAt <= new Date()) return null;
         if (!(await compare(password, user.passwordHash))) return null;
 
-        return { id: user.id, name: user.name, email: user.email, image: user.image };
+        return { id: user.id, name: user.name, email: user.email, image: user.image, role: user.role };
       },
     }),
   ],
@@ -30,9 +31,11 @@ export const authConfig: AuthConfig = {
       if (user?.id) {
         const accountUser = await prisma.user.findUnique({
           where: { id: user.id },
-          select: { role: true },
+          select: { role: true, active: true, accessExpiresAt: true },
         });
-        token.role = accountUser?.role ?? 'VIEWER';
+        token.role = accountUser?.active && (!accountUser.accessExpiresAt || accountUser.accessExpiresAt > new Date())
+          ? accountUser.role
+          : 'VIEWER';
       }
       return token;
     },
@@ -46,6 +49,7 @@ export const authConfig: AuthConfig = {
     },
   },
   session: { strategy: 'jwt' },
+  basePath: '/api/auth',
   secret: (globalThis as typeof globalThis & { process?: { env?: { AUTH_SECRET?: string } } }).process?.env
     ?.AUTH_SECRET,
   trustHost: true,
@@ -66,7 +70,7 @@ export const getAuthenticatedUser = async (headers: Headers): Promise<Authentica
   const session = (await response.json()) as {
     user?: { id?: string; email?: string | null; role?: string };
   };
-  if (!session.user?.id) return null;
+  if (!session?.user?.id) return null;
 
   return {
     id: session.user.id,

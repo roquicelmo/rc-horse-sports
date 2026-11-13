@@ -1,5 +1,7 @@
 export interface Competitor {
   id: string;
+  ownerId?: string;
+  ownerName?: string;
   registrationNo?: string;
   nome: string;
   handicap: number; // 1.0 to 5.0 (step 0.5)

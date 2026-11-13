@@ -203,6 +203,10 @@
 
 /* Print styles for Arena Draw Table */
 @media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm;
+  }
   body {
     background: white !important;
     color: black !important;
@@ -219,5 +223,22 @@
   .table-print th, .table-print td {
     border-color: #cbd5e1 !important;
     color: black !important;
+  }
+  .print-header {
+    background: white !important;
+    border: 2px solid #172036 !important;
+    color: #172036 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  .print-header p,
+  .print-header span {
+    color: #526276 !important;
+  }
+  .print-header h2 {
+    color: #172036 !important;
+  }
+  .print-avoid-break {
+    break-inside: avoid;
   }
 }

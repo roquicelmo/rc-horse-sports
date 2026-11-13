@@ -4,23 +4,27 @@ import type { Competitor } from '../types/roping';
 
 interface AthletesPageProps {
   athletes: Competitor[];
+  owners?: Array<{ id: string; name: string | null; email: string }>;
+  canFilterOwners?: boolean;
   onAdd: () => void;
   onRemove: (athlete: Competitor) => void;
 }
 
-export const AthletesPage: React.FC<AthletesPageProps> = ({ athletes, onAdd, onRemove }) => {
+export const AthletesPage: React.FC<AthletesPageProps> = ({ athletes, owners = [], canFilterOwners = false, onAdd, onRemove }) => {
   const [search, setSearch] = useState('');
+  const [ownerId, setOwnerId] = useState('');
 
   const filteredAthletes = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    if (!normalizedSearch) return athletes;
+    const scoped = ownerId ? athletes.filter((athlete) => athlete.ownerId === ownerId) : athletes;
+    if (!normalizedSearch) return scoped;
 
-    return athletes.filter((athlete) =>
+    return scoped.filter((athlete) =>
       [athlete.nome, athlete.apelido, athlete.cidade]
         .filter(Boolean)
         .some((value) => value?.toLowerCase().includes(normalizedSearch))
     );
-  }, [athletes, search]);
+  }, [athletes, ownerId, search]);
 
   return (
     <section className="space-y-5">
@@ -52,6 +56,8 @@ export const AthletesPage: React.FC<AthletesPageProps> = ({ athletes, onAdd, onR
             <p className="text-xs text-[#6b788b]">Disponíveis para novas inscrições</p>
           </div>
         </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+        {canFilterOwners && <select value={ownerId} onChange={(event) => setOwnerId(event.target.value)} className="rounded-xl border border-[#dfe6ed] bg-white px-3 py-2.5 text-sm text-[#172036] outline-none focus:border-[#218f83]"><option value="">Todos os proprietários</option>{owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.name ?? owner.email}</option>)}</select>}
         <label className="relative block w-full sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8290a1]" />
           <input
@@ -62,6 +68,7 @@ export const AthletesPage: React.FC<AthletesPageProps> = ({ athletes, onAdd, onR
             className="w-full rounded-xl border border-[#dfe6ed] bg-white py-2.5 pl-9 pr-3 text-sm text-[#172036] outline-none transition focus:border-[#218f83] focus:ring-2 focus:ring-[#218f83]/15"
           />
         </label>
+        </div>
       </div>
 
       {filteredAthletes.length === 0 ? (
@@ -99,6 +106,7 @@ export const AthletesPage: React.FC<AthletesPageProps> = ({ athletes, onAdd, onR
                   </span>
                 )}
               </div>
+              {canFilterOwners && <p className="mt-3 text-xs font-semibold text-[#6b788b]">Proprietário: {athlete.ownerName ?? 'Sem atribuição'}</p>}
             </article>
           ))}
         </div>
