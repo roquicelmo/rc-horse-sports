@@ -1,32 +1,42 @@
-# React + TypeScript + Vite
+# Sorteios Lagoa
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Aplicação Next.js para gestão de provas de laço em dupla, com Prisma,
+PostgreSQL, autenticação Auth.js, sorteios persistentes, operação de pista e
+relatórios.
 
-Currently, two official plugins are available:
+## Desenvolvimento
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+O ambiente local precisa das variáveis definidas em `.env.example`. Para
+autenticação local, configure também `AUTH_SECRET`.
+
+## Build e produção
+
+```bash
+npm run build
+npm run start
+```
+
+O deploy usa a configuração em [vercel.json](./vercel.json) e o diretório de
+saída `.next`.
+
+## Banco de dados
+
+```bash
+npm run db:generate
+npm run db:validate
+npm run db:migrate
+npm run db:deploy
+npm run db:seed
+```
+
+O schema e as migrations ficam em [prisma/](./prisma/).
+
+## Documentação
+
+- [Documentação técnica](./docs/technical.md)
+- [Manual do usuário](./docs/user-manual.md)

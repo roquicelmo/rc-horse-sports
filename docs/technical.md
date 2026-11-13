@@ -108,8 +108,10 @@ Autenticação usa:
 - [`src/server/next-auth-handler.ts`](../src/server/next-auth-handler.ts);
 - [`src/server/auth.ts`](../src/server/auth.ts).
 
-Não há mais rewrites em `vercel.json`. Isso elimina a arquitetura anterior de
-várias funções independentes e deixa o Next controlar o empacotamento das APIs.
+[`vercel.json`](../vercel.json) apenas declara o framework Next.js, o comando de
+build e `.next` como diretório de saída. Não há mais rewrites de API. Isso
+elimina a arquitetura anterior de várias funções independentes e deixa o Next
+controlar o empacotamento das APIs.
 
 ### Endpoints implementados
 
